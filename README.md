@@ -1,4 +1,4 @@
-# comma2k19 compression challenge 🤏
+# comma2k25 compression challenge 🤏
 
 <p align="center">
 <img height="300" alt="image" src="https://github.com/user-attachments/assets/f72fae51-96bd-47c6-b4ff-6e17e79220cb" />
@@ -22,6 +22,22 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 <p align="center">
 <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/4dc4d758-230f-4af7-9d5a-06230c48c274" />
 </p>
+
+## Quickstart
+```
+# clone the repo
+git clone https://github.com/commaai/comma2k25_compression_challenge.git
+cd comma2k25_compression_challenge
+# git lfs
+git lfs install
+git lfs pull
+# uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# pick one: cpu / cu118 / cu126 / cu128
+uv sync --group cu126
+# activate or use "uv run python ..."
+source .venv/bin/activate
+```
 
 ## submission format
 ```
