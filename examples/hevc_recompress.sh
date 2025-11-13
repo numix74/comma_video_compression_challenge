@@ -5,23 +5,42 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PD="$(cd "${HERE}/.." && pwd)"
 LIST="${PD}/test_video_names.txt"
 
-if [[ $# -ne 5 ]]; then
-  echo "Usage: $0 <crf> <scale> <in_dir> <jobs> <num>" >&2
+CRF=""
+SCALE=""
+IN_DIR=""
+JOBS=""
+NUM=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --crf)
+      CRF="$2"; shift 2 ;;
+    --scale)
+      SCALE="$2"; shift 2 ;;
+    --in-dir|--in_dir)
+      IN_DIR="${2%/}"; shift 2 ;;
+    --jobs)
+      JOBS="$2"; shift 2 ;;
+    --num)
+      NUM="$2"; shift 2 ;;
+    *)
+      echo "Unknown arg: $1" >&2
+      echo "Usage: $0 --crf <crf> --scale <scale> --in-dir <in_dir> --jobs <jobs> --num <num>" >&2
+      exit 2 ;;
+  esac
+done
+
+if [[ -z "$CRF" || -z "$SCALE" || -z "$IN_DIR" || -z "$JOBS" || -z "$NUM" ]]; then
+  echo "Usage: $0 --crf <crf> --scale <scale> --in-dir <in_dir> --jobs <jobs> --num <num>" >&2
   exit 2
 fi
-
-CRF="$1"
-SCALE="$2"
-IN_DIR="${3%/}"
-JOBS="$4"
-NUM="$5"
 
 TMPDIR="$(mktemp -d)"
 OUT_ZIP="$PD/comma2k19_submission.zip"
 
 export CRF IN_DIR TMPDIR SCALE
 
-head -n "$NUM" "$LIST" | xargs -n1 -P"$JOBS" -I{} bash -lc '
+head -n "$NUM" "$LIST" | xargs -P"$JOBS" -I{} bash -lc '
   rel="$1"
   [[ -z "$rel" ]] && exit 0
 

@@ -43,8 +43,8 @@ curl -fLO https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compres
 python frame_utils_dali.py
 # test models
 python modules.py
-# naively recompress one video with crf 30 and no resizing
-bash examples/hevc_recompress.sh 30 1 test_videos/ 1 1
+# naively recompress one video
+bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir test_videos/ --jobs 1 --num 1
 # evaluate the naive recompression strategy
 torchrun --nproc-per-node 1 evaluate.py  # or just python evaluate.py
 ```
