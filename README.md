@@ -55,7 +55,27 @@ python modules.py
 bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir deflated_test_videos/ --jobs 1 --num-videos 1
 
 # evaluate the naive recompression strategy
-torchrun --nproc-per-node 1 evaluate.py --num-videos 1 # or just python evaluate.py
+torchrun --nproc-per-node 1 evaluate.py --num-videos 1 # or just python evaluate.py --num-videos 1
+```
+
+If everything worked as expected, this should producce a `report.txt` file with this content:
+
+```
+=== Evaluation config ===
+  batch_size: 32
+  compressed_archive_path: comma2k19_submission.zip
+  compressed_deflated_dir: deflated_comma2k19_submission
+  num_threads: 2
+  num_videos: 1
+  prefetch_queue_depth: 4
+  seed: 1234
+  uncompressed_archive_path: test_videos.zip
+  uncompressed_deflated_dir: deflated_test_videos
+=== Evaluation results over 576 samples ===
+  Average PoseNet Distortion: 0.01536327
+  Average SegNet Distortion: 0.00381014
+  Compression Rate (from deflated data): 0.31004526
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.52410569
 ```
 
 ## submission format
