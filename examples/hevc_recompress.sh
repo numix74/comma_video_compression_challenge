@@ -21,11 +21,11 @@ while [[ $# -gt 0 ]]; do
       IN_DIR="${2%/}"; shift 2 ;;
     --jobs)
       JOBS="$2"; shift 2 ;;
-    --num)
+    --num-videos|--num_videos)
       NUM="$2"; shift 2 ;;
     *)
       echo "Unknown arg: $1" >&2
-      echo "Usage: $0 --crf <crf> --scale <scale> --in-dir <in_dir> --jobs <jobs> --num <num>" >&2
+      echo "Usage: $0 --crf <crf> --scale <scale> --in-dir <in_dir> --jobs <jobs> --num-videos <num-videos>" >&2
       exit 2 ;;
   esac
 done

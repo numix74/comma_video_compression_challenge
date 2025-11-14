@@ -28,25 +28,34 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 # clone the repo
 git clone https://github.com/commaai/comma2k25_compression_challenge.git
 cd comma2k25_compression_challenge
+
 # git lfs
 git lfs install
 git lfs pull
+
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # gpu required... pick one: cu126/ cu128 / cu130
 uv sync --group cu126
+
 # activate or use "uv run python ..."
 source .venv/bin/activate
+
 # download videos
 curl -fLO https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip
+
 # test dataloaders
 python frame_utils_dali.py
+
 # test models
 python modules.py
+
 # naively recompress one video
-bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir test_videos/ --jobs 1 --num 1
+bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir test_videos/ --jobs 1 --num-videos 1
+
 # evaluate the naive recompression strategy
-torchrun --nproc-per-node 1 evaluate.py  # or just python evaluate.py
+torchrun --nproc-per-node 1 evaluate.py --num-videos 1 # or just python evaluate.py
 ```
 
 ## submission format
@@ -54,6 +63,7 @@ torchrun --nproc-per-node 1 evaluate.py  # or just python evaluate.py
 comma2k19_submission/
   comma2k19_submission.zip      # all data needed to reconstruct (this is the archive)
   your_dataset.py               # defines YourSubmissionDataset
+  report.txt                    # the txt file saved by evaluate.py
   README.md                     # optional notes
 
 ```
