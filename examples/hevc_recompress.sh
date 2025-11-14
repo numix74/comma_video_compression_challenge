@@ -59,7 +59,7 @@ head -n "$NUM" "$LIST" | xargs -P"$JOBS" -I{} bash -lc '
   ffmpeg -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$IN" \
     ${SCALE_VF} \
-    -c:v libx265 -preset fast -crf "$CRF" \
+    -c:v libx265 -preset ultrafast -crf "$CRF" \
     -g 1 -bf 0 -x265-params "keyint=1:min-keyint=1:scenecut=0:frame-threads=1:log-level=warning" \
     -r 20 -f hevc "$OUT"
 ' _ {}
