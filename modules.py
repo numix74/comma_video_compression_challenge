@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, timm, einops
+import torch, timm, einops, shutil
 import torch.nn as nn
 import segmentation_models_pytorch as smp
 from pathlib import Path
@@ -9,6 +9,7 @@ from frame_utils_dali import rgb_to_yuv6, affine_transform_image, camera_size, e
 
 Head = namedtuple('Head', ['name', 'hidden', 'out'])
 HERE = Path(__file__).resolve().parent
+EOG_AVAILABLE = shutil.which("eog") is not None
 segnet_sd_path = HERE / 'models/segnet.safetensors'
 posenet_sd_path = HERE / 'models/posenet.safetensors'
 
@@ -83,7 +84,7 @@ class PoseNet(nn.Module):
   def debug_run(self, x, idx=0, keys=['pose']):
     from PIL import ImageShow, Image
     import os, tempfile
-    viewer = ImageShow.EogViewer()
+    viewer = ImageShow.EogViewer() if EOG_AVAILABLE else ImageShow.XDGViewer()
     f, filename = tempfile.mkstemp('.gif')
     os.close(f)
     x = self.preprocess_input(x)
@@ -109,7 +110,7 @@ class SegNet(smp.Unet):
   @torch.inference_mode()
   def debug_run(self, x, idx=0):
     from PIL import ImageShow, Image
-    ImageShow.register(ImageShow.EogViewer(), order=0)
+    ImageShow.register(ImageShow.EogViewer() if EOG_AVAILABLE else ImageShow.XDGViewer(), order=0)
     x = self.preprocess_input(x)
     out = self(x)
     img = 0.5 * x + 0.5 * out.argmax(dim=1, keepdim=True) * (255 / 5)
