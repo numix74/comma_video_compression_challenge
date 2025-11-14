@@ -52,7 +52,7 @@ python frame_utils_dali.py
 python modules.py
 
 # naively recompress one video
-bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir test_videos/ --jobs 1 --num-videos 1
+bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir deflated_test_videos/ --jobs 1 --num-videos 1
 
 # evaluate the naive recompression strategy
 torchrun --nproc-per-node 1 evaluate.py --num-videos 1 # or just python evaluate.py
