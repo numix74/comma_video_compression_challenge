@@ -78,7 +78,7 @@ class PoseNet(nn.Module):
 
   def compute_distortion(self, out1, out2):
     distortion_heads = ['pose']
-    return sum((out1[h.name][..., : h.out // 2] - out2[h.name][..., : h.out // 2]).pow(2).mean() for h in self.hydra.heads if h.name in distortion_heads) # MSE
+    return sum((out1[h.name][..., : h.out // 2] - out2[h.name][..., : h.out // 2]).pow(2).mean(dim=tuple(range(1, out1[h.name].ndim))) for h in self.hydra.heads if h.name in distortion_heads) # MSE
 
   @torch.inference_mode()
   def debug_run(self, x, idx=0, keys=['pose']):
@@ -105,7 +105,8 @@ class SegNet(smp.Unet):
     return torch.nn.functional.interpolate(x, size=(segnet_model_input_size[1], segnet_model_input_size[0]), mode='bilinear')
 
   def compute_distortion(self, out1, out2):
-    return (out1.argmax(dim=1) != out2.argmax(dim=1)).float().mean()  # accuracy
+    diff = (out1.argmax(dim=1) != out2.argmax(dim=1)).float()
+    return diff.mean(dim=tuple(range(1, diff.ndim)))  # accuracy
 
   @torch.inference_mode()
   def debug_run(self, x, idx=0):

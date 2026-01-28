@@ -17,8 +17,6 @@
 score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 ```
 
-- scoring window: The score is computed using 64 videos from `Chunk_1` of `comma2k19` listed in `test_video_names.txt`. We use the largest prefix that fits an integer number of batches of seq_len sized sequences. The score is computed using a batch size of 32, meaning that for a video of 1200 frames, the first 1152 frames are used for scoring (18 batches of 2 frames)
-
 <p align="center">
 <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/4dc4d758-230f-4af7-9d5a-06230c48c274" />
 </p>
@@ -52,39 +50,36 @@ python frame_utils_dali.py
 python modules.py
 
 # naively recompress one video
-bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir deflated_test_videos/ --jobs 1 --num-videos 1
+bash examples/hevc_recompress.sh --crf 30 --scale 1 --in-dir deflated_test_videos/ --jobs 1 --video-names-file stage_1_test_video_names.txt
 
 # evaluate the naive recompression strategy
-torchrun --nproc-per-node 1 evaluate.py --num-videos 1 # or just python evaluate.py --num-videos 1
+torchrun --nproc-per-node 1 evaluate.py  # or just python evaluate.py
 ```
 
 If everything worked as expected, this should producce a `report.txt` file with this content:
 
 ```
 === Evaluation config ===
-  batch_size: 32
+  batch_size: 16
   compressed_archive_path: comma2k19_submission.zip
   compressed_deflated_dir: deflated_comma2k19_submission
   num_threads: 2
-  num_videos: 1
   prefetch_queue_depth: 4
   seed: 1234
   uncompressed_archive_path: test_videos.zip
   uncompressed_deflated_dir: deflated_test_videos
-=== Evaluation results over 576 samples ===
-  Average PoseNet Distortion: 0.01536327
-  Average SegNet Distortion: 0.00381014
-  Compression Rate (from deflated data): 0.31004526
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.52410569
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.01504754
+  Average SegNet Distortion: 0.00381063
+  Submission file size (deflated): 14428760.00000000 bytes
+  Original uncompressed size (deflated): 2399626528.00000000 bytes
+  Compression Rate (deflated): 0.00601292
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.91929734
 ```
 
 ## submission format
 ```
-comma2k19_submission/
-  comma2k19_submission.zip      # all data needed to reconstruct (this is the archive)
-  your_dataset.py               # defines YourSubmissionDataset
-  report.txt                    # the txt file saved by evaluate.py
-  README.md                     # optional notes
+WIP
 
 ```
 

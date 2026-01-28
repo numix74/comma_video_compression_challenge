@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, mmap, torch, warnings
+import math, os, mmap, torch, warnings
 from typing import List
 from pathlib import Path
 import nvidia.dali.fn as fn
@@ -48,7 +48,7 @@ def inbuf_video_pipe():
     device="mixed",
     no_copy=True,
     blocking=False,
-    last_sequence_policy="partial",
+    last_sequence_policy="pad", # zero image
   )
   return vid
 
@@ -137,15 +137,20 @@ class DaliHevcDataset(torch.utils.data.IterableDataset):
     for path in self.paths:
       frames_per_file = hevc_frame_count(path)
       num_sequences = frames_per_file // seq_len
-      pipe_size = (num_sequences // self.batch_size) * self.batch_size
+      it_size = math.ceil(num_sequences / self.batch_size)
       pipe = inbuf_video_pipe(batch_size=self.batch_size, num_threads=self.num_threads, device_id=self.device_id, prefetch_queue_depth=self.prefetch_queue_depth)
       pipe.build()
       mv, (mm, f) = hevc_buffer_mmap(path)
       pipe.feed_input("inbuf", [mv])
-      it = DALIGenericIterator([pipe], output_map=["video"], size=pipe_size, auto_reset=False, last_batch_policy=LastBatchPolicy.PARTIAL, last_batch_padded=False, prepare_first_batch=False)
+      it = DALIGenericIterator([pipe], output_map=["video"], auto_reset=False, last_batch_policy=LastBatchPolicy.PARTIAL, last_batch_padded=False, prepare_first_batch=False)
 
-      for idx, data in enumerate(it):
+      idx = 0
+      while True:
+        if idx >= it_size:
+          break
+        data = next(it)
         vid = data[0]["video"]
+        idx += 1
         yield path, idx, vid
 
       torch.cuda.synchronize()
@@ -156,7 +161,7 @@ class DaliHevcDataset(torch.utils.data.IterableDataset):
       f.close()
 
 if __name__ == "__main__":
-  batch_size = 32
+  batch_size = 13
   device_id = 0
   files = ['b0c9d2329ad1606b|2018-07-29--11-17-20/7/video.hevc']
   uncompressed_archive_path = Path('./test_videos.zip')
@@ -164,5 +169,5 @@ if __name__ == "__main__":
   ds = DaliHevcDataset(files, archive_path=uncompressed_archive_path, data_dir=uncompressed_data_dir, batch_size=batch_size, device_id=device_id)
   ds.prepare_data()
   for i, (path, idx, batch) in enumerate(ds):
-    assert batch.shape == (batch_size, seq_len, camera_size[1], camera_size[0], 3), f"unexpected batch shape: {batch.shape}"
+    assert list(batch.shape)[1:] == [seq_len, camera_size[1], camera_size[0], 3], f"unexpected batch shape: {batch.shape}"
     print(i, batch.shape)
