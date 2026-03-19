@@ -18,7 +18,7 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 ```
 
 <p align="center">
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/3e580e88-988d-4495-b236-3dec96e18217"/>
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4421c23-8fbe-4293-b8de-9a77e6d568ab"/>
 </p>
 
 ## Quickstart
@@ -75,9 +75,19 @@ If everything worked as expected, this should producce a `report.txt` file with 
   Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 10.79350826
 ```
 
-## submission format
+## submission format and rules
 
-`DatasetClass` should be a subclass of `torch.utils.data.IterableDataset` defined in a python file, with the following signature and methods
+`DatasetClass` should be a subclass of `torch.utils.data.IterableDataset` defined in a python file, with the following signature and methods.
+
+The dataset should yield batches of decompressed video frames of `file_names` as torch tensors, which will be fed to the distortion evaluation models.
+
+The dataset can consume anything in `args.compressed_dir` to produce the batches, all files in `args.compressed_dir` will be used to compute the compressed size for the rate term of the score.
+
+External libraries and tools can be used and won't be counted towards the compressed size, unless they use large artifacts (such as neural networks, meshes, point clouds, etc.).
+
+The dataset should not consume anything outside of `args.compressed_dir`.
+
+You can use anything for compression, including the models and the original uncompressed videos. Include your compression code if you wish to participate in the next stages of the challenge, but it won't be used in the first stage.
 
 ```python
 
@@ -92,7 +102,7 @@ class DatasetClass(torch.utils.data.IterableDataset):
 
   def prepare_data(self):
     # called by all ranks
-    # e.g. do something with comma2k19_submission.zip
+    # e.g. do something with if needed submission.zip
     ...
 
   def __iter__(self):
@@ -108,4 +118,6 @@ class DatasetClass(torch.utils.data.IterableDataset):
 
 ## going further
 
-[test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip) is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset.
+The first stage of the challenge will only use the `public_test_video_names.txt` for evaluation. We will then run the top submissions on a private set of videos for a new evaluation round.
+
+You can use [test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip), which is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset, to test your compression strategy on more samples.
