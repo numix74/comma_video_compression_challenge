@@ -16,7 +16,7 @@ def hevc_buffer_mmap(path: str):
   mv = memoryview(mm)
   return mv, (mm, f)
 
-def hevc_frame_count(path: str) -> int:
+def _hevc_frame_count(path: str) -> int:
   # assumes one slice per frame x265 default
   with open(path, 'rb') as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as b:
     frames, i = 0, 0
@@ -28,6 +28,22 @@ def hevc_frame_count(path: str) -> int:
       if ((b[p] >> 1) & 0x3F) <= 31:   # any VCL slice
         frames += 1
       i = p
+
+def _container_frame_count(path: str) -> int:
+  import av
+  container = av.open(path)
+  stream = container.streams.video[0]
+  n = stream.frames
+  if n == 0:  # some containers don't report frame count
+    n = sum(1 for _ in container.demux(stream) if _.size > 0)
+  container.close()
+  return n
+
+def frame_count(path: str) -> int:
+  if path.endswith('.hevc'):
+    return _hevc_frame_count(path)
+  return _container_frame_count(path)
+
 
 @torch.no_grad()
 def rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
@@ -59,9 +75,11 @@ def rgb_to_yuv6(rgb_chw: torch.Tensor) -> torch.Tensor:
   y11 = Y[..., 1::2, 1::2]
   return torch.stack([y00, y10, y01, y11, U_sub, V_sub], dim=-3)
 
-class HevcDataset(torch.utils.data.IterableDataset):
-  def __init__(self, file_names: List[str], archive_path: Path, data_dir: Path, batch_size: int, device: torch.device, num_threads: int = 2, seed: int = 123, prefetch_queue_depth: int = 4):
+class VideoDataset(torch.utils.data.IterableDataset):
+  def __init__(self, file_names: List[str], archive_path: Path, data_dir: Path, batch_size: int, device: torch.device, format: str = None, num_threads: int = 2, seed: int = 123, prefetch_queue_depth: int = 4):
     super().__init__()
+    if format is not None:
+      file_names = [str(Path(fn).with_suffix('.' + format.lstrip('.'))) for fn in file_names]
     self.all_file_names = file_names
     self.archive_path = archive_path
     self.batch_size = batch_size
@@ -96,10 +114,10 @@ class HevcDataset(torch.utils.data.IterableDataset):
     assert all((self.data_dir / fn).exists() for fn in self.file_names)
     print(f"{type(self).__name__} on rank {self.rank} with {len(self.paths)} files.")
 
-class DaliHevcDataset(HevcDataset):
+class DaliVideoDataset(VideoDataset):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    assert self.device.type == 'cuda', f"DaliHevcDataset requires cuda, got {self.device}"
+    assert self.device.type == 'cuda', f"DaliVideoDataset requires cuda, got {self.device}"
     import nvidia.dali.fn as fn
     from nvidia.dali import pipeline_def
     warnings.filterwarnings("ignore", message=r"Please set `reader_name`.*", category=Warning, module=r"nvidia\.dali\.plugin\.base_iterator")
@@ -108,7 +126,7 @@ class DaliHevcDataset(HevcDataset):
     def _pipe():
       vid = fn.experimental.inputs.video(
         name="inbuf",
-        sequence_length=2,
+        sequence_length=seq_len,
         device="mixed",
         no_copy=True,
         blocking=False,
@@ -122,19 +140,17 @@ class DaliHevcDataset(HevcDataset):
     from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 
     for path in self.paths:
-      frames_per_file = hevc_frame_count(path)
+      mv, (mm, f) = hevc_buffer_mmap(path)
+      frames_per_file = frame_count(path)
       num_sequences = frames_per_file // seq_len
       it_size = math.ceil(num_sequences / self.batch_size)
       pipe = self._pipe_def(batch_size=self.batch_size, num_threads=self.num_threads, device_id=self.device_id, prefetch_queue_depth=self.prefetch_queue_depth)
       pipe.build()
-      mv, (mm, f) = hevc_buffer_mmap(path)
       pipe.feed_input("inbuf", [mv])
       it = DALIGenericIterator([pipe], output_map=["video"], auto_reset=False, last_batch_policy=LastBatchPolicy.PARTIAL, last_batch_padded=False, prepare_first_batch=False)
 
       idx = 0
-      while True:
-        if idx >= it_size:
-          break
+      while idx < it_size:
         data = next(it)
         vid = data[0]["video"]
         idx += 1
@@ -147,15 +163,16 @@ class DaliHevcDataset(HevcDataset):
       mm.close()
       f.close()
 
-class AVHevcDataset(HevcDataset):
+class AVVideoDataset(VideoDataset):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    assert self.device.type == 'cpu', f"AVHevcDataset only supports cpu, got {self.device}"
+    assert self.device.type == 'cpu', f"AVVideoDataset only supports cpu, got {self.device}"
 
   def __iter__(self):
     import av
     for path in self.paths:
-      container = av.open(path, format='hevc')
+      fmt = 'hevc' if path.endswith('.hevc') else None
+      container = av.open(path, format=fmt)
       stream = container.streams.video[0]
       batch_buf = []
       seq_buf = []
@@ -181,11 +198,12 @@ class AVHevcDataset(HevcDataset):
 
 if __name__ == "__main__":
   batch_size = 13
-  device = torch.device('cpu')
+  device = torch.device('cuda')
   files = (HERE / 'public_test_video_names.txt').read_text().splitlines()
+  fmt = 'hevc'
   uncompressed_archive_path = None # Path('./test_videos.zip')
   uncompressed_data_dir = Path('./test_videos/')
-  ds = AVHevcDataset(files, archive_path=uncompressed_archive_path, data_dir=uncompressed_data_dir, batch_size=batch_size, device=device)
+  ds = DaliVideoDataset(files, archive_path=uncompressed_archive_path, data_dir=uncompressed_data_dir, batch_size=batch_size, device=device, format=fmt)
   ds.prepare_data()
   for i, (path, idx, batch) in enumerate(ds):
     assert list(batch.shape)[1:] == [seq_len, camera_size[1], camera_size[0], 3], f"unexpected batch shape: {batch.shape}"

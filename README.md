@@ -4,7 +4,7 @@
 <img height="300" alt="image" src="https://github.com/user-attachments/assets/f72fae51-96bd-47c6-b4ff-6e17e79220cb" />
 </p>
 
-[test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip) is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset. Make it as small as possible while preserving semantic content (evaluated by a segmentation model) and temporal dynamics (evaluated by an egomotion relative pose model).
+ `./test_videos/b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc` is a 1 minute long driving video of size 37.5 MB. Make it as small as possible while preserving semantic content (evaluated by a segmentation model) and temporal dynamics (evaluated by an egomotion relative pose model).
 
 - distortion:
   - SegNet distortion: average class disagreements between the predictions of a SegNet evaluated on original vs. reconstructed frames
@@ -47,10 +47,10 @@ python frame_utils.py
 python modules.py
 
 # naively recompress
-bash examples/compress.sh --crf 30 --scale 1 --in-dir test_videos/ --jobs 1 --video-names-file public_test_video_names.txt --out-dir my_output/ --encoder gpu
+bash examples/baseline_fast.sh --in-dir test_videos/ --jobs 1 --video-names-file public_test_video_names.txt --out-dir ./submission/
 
 # evaluate the naive recompression strategy
-torchrun --nproc-per-node 1 evaluate.py  --dataloader examples/dataloader.py # or just python evaluate.py --dataloader examples/dataloader.py
+torchrun --nproc-per-node 1 evaluate.py  --dataloader examples/baseline_dataloader_fast.py --compressed-deflated-dir ./submission
 ```
 
 If everything worked as expected, this should producce a `report.txt` file with this content:
@@ -60,10 +60,11 @@ If everything worked as expected, this should producce a `report.txt` file with 
   batch_size: 16
   compressed_archive_path: submission.zip
   compressed_deflated_dir: submission
-  dataloader: examples/dataloader.py
+  dataloader: examples/baseline_dataloader_fast.py
   device: None
   num_threads: 2
   prefetch_queue_depth: 4
+  report: report.txt
   seed: 1234
   uncompressed_archive_path: test_videos.zip
   uncompressed_deflated_dir: test_videos
@@ -108,4 +109,6 @@ class DatasetClass(torch.utils.data.IterableDataset):
 
 ```
 
+## going further
 
+[test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip) is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset.

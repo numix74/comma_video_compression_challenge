@@ -2,7 +2,7 @@
 import os, sys, torch, math, argparse, importlib
 from pathlib import Path
 from tqdm import tqdm
-from frame_utils import DaliHevcDataset, AVHevcDataset, camera_size, seq_len
+from frame_utils import DaliVideoDataset, AVVideoDataset, camera_size, seq_len
 from modules import DistortionNet, segnet_sd_path, posenet_sd_path
 
 def main():
@@ -32,14 +32,14 @@ def main():
     is_distributed = world_size > 1
     device = torch.device("cuda", local_rank)
     torch.cuda.set_device(device)
-    DefaultDatasetClass = DaliHevcDataset
+    DefaultDatasetClass = DaliVideoDataset
   else:
     local_rank = 0
     rank = 0
     world_size = 1
     is_distributed = False
     device = torch.device("cpu")
-    DefaultDatasetClass = AVHevcDataset
+    DefaultDatasetClass = AVVideoDataset
 
   spec = importlib.util.spec_from_file_location("submission_dataloader", args.dataloader)
   mod = importlib.util.module_from_spec(spec)
