@@ -40,11 +40,6 @@ uv sync --group cu128
 # activate or use "uv run python ..."
 source .venv/bin/activate
 
-# download test videos
-while IFS= read -r name; do
-  curl -fL --create-dirs -o "test_videos/$name" "https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/$(echo "$name" | sed 's/|/%7C/g')"
-done < public_test_video_names.txt
-
 # test dataloaders
 python frame_utils.py
 
