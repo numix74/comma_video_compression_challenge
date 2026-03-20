@@ -1,11 +1,11 @@
 === Evaluation config ===
   batch_size: 16
-  device: None
+  device: gpu
   num_threads: 2
   prefetch_queue_depth: 4
-  report: /home/batman/comma2k25_compression_challenge/submissions/baseline/report.txt
+  report: submissions/baseline/report.txt
   seed: 1234
-  submission_dir: /home/batman/comma2k25_compression_challenge/submissions/baseline
+  submission_dir: submissions/baseline
   uncompressed_dir: /home/batman/comma2k25_compression_challenge/test_videos
   video_names_file: /home/batman/comma2k25_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===

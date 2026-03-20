@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-import av, argparse
-from pathlib import Path
+import av
 from frame_utils import yuv420_to_rgb
 
 
-def decode_to_file(video_path: str, dst: Path):
+def decode_to_file(video_path: str, dst: str):
   fmt = 'hevc' if video_path.endswith('.hevc') else None
   container = av.open(video_path, format=fmt)
   stream = container.streams.video[0]
@@ -18,27 +17,8 @@ def decode_to_file(video_path: str, dst: Path):
   return n
 
 
-def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--data-dir", type=str, required=True, help="Directory with compressed video files")
-  parser.add_argument("--output-dir", type=str, required=True, help="Directory to save raw tensor files")
-  parser.add_argument("--file-list", type=str, required=True, help="Text file with video paths (one per line)")
-  args = parser.parse_args()
-
-  data_dir = Path(args.data_dir)
-  output_dir = Path(args.output_dir)
-  file_names = Path(args.file_list).read_text().splitlines()
-  file_names = [str(Path(fn).with_suffix('.hevc')) for fn in file_names]
-
-  for fn in file_names:
-    src = data_dir / fn
-    dst = output_dir / Path(fn).with_suffix('.raw')
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    assert src.exists(), f"ERROR: {src} not found"
-    print(f"Decoding {fn} ...", end=" ", flush=True)
-    n = decode_to_file(str(src), dst)
-    print(f"saved {n} frames")
-
-
 if __name__ == "__main__":
-  main()
+  import sys
+  src, dst = sys.argv[1], sys.argv[2]
+  n = decode_to_file(src, dst)
+  print(f"saved {n} frames")
