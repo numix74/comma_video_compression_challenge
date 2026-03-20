@@ -161,6 +161,12 @@ venv.bak/
 .spyderproject
 .spyproject
 
+# vscode
+.vscode/
+
+# claude
+.claude/
+
 # Rope project settings
 .ropeproject
 
@@ -214,4 +220,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Submission artifacts
+archive.zip
+archive/
+inflated/
 

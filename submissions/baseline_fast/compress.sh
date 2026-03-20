@@ -2,11 +2,11 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PD="$(cd "${HERE}/.." && pwd)"
+PD="$(cd "${HERE}/../.." && pwd)"
 
 IN_DIR="${PD}/test_videos"
 VIDEO_NAMES_FILE="${PD}/public_test_video_names.txt"
-OUTDIR="${PD}/submission"
+ARCHIVE_DIR="${HERE}/archive"
 JOBS="1"
 
 while [[ $# -gt 0 ]]; do
@@ -17,42 +17,36 @@ while [[ $# -gt 0 ]]; do
       JOBS="$2"; shift 2 ;;
     --video-names-file|--video_names_file)
       VIDEO_NAMES_FILE="$2"; shift 2 ;;
-    --out-dir|--out_dir)
-      OUTDIR="${2%/}"; shift 2 ;;
     *)
       echo "Unknown arg: $1" >&2
-      echo "Usage: $0 [--in-dir <dir>] [--jobs <n>] [--video-names-file <file>] [--out-dir <dir>]" >&2
+      echo "Usage: $0 [--in-dir <dir>] [--jobs <n>] [--video-names-file <file>]" >&2
       exit 2 ;;
   esac
 done
 
-OUTDIR="$(mkdir -p "$OUTDIR" && cd "$OUTDIR" && pwd)"
-TMPDIR="$(mktemp -d)"
+rm -rf "$ARCHIVE_DIR"
+mkdir -p "$ARCHIVE_DIR"
 
-export IN_DIR TMPDIR JOBS
+export IN_DIR ARCHIVE_DIR
 
 head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -I{} bash -lc '
   rel="$1"
   [[ -z "$rel" ]] && exit 0
 
   IN="${IN_DIR}/${rel}"
-  OUT="${TMPDIR}/${rel}"
-  mkdir -p "$(dirname "$OUT")"
+  OUT="${ARCHIVE_DIR}/$(dirname "$rel")"
+  mkdir -p "$OUT"
 
-  echo "→ ${IN}  →  ${OUT}"
+  echo "→ ${IN}  →  ${OUT}/video.hevc"
 
   ffmpeg -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$IN" \
     -c:v libx265 -preset ultrafast -crf 30 \
     -g 1 -bf 0 -x265-params "keyint=1:min-keyint=1:scenecut=0:frame-threads=1:log-level=warning" \
-    -r 20 -f hevc "$OUT"
+    -r 20 -f hevc "$OUT"/video.hevc
 ' _ {}
 
-rm -rf "$OUTDIR"
-mkdir -p "$OUTDIR"
-(
-  cd "$TMPDIR"
-  cp -r . "$OUTDIR"
-)
-rm -rf "$TMPDIR"
-echo "All done. Saved $OUTDIR"
+# zip archive
+cd "$ARCHIVE_DIR"
+zip -r "${HERE}/archive.zip" .
+echo "Compressed to ${HERE}/archive.zip"

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import math, os, mmap, torch, warnings
+import torch.nn.functional as F
+import numpy as np
 from typing import List
 from pathlib import Path
 
@@ -154,10 +156,36 @@ class DaliVideoDataset(VideoDataset):
       mm.close()
       f.close()
 
+def yuv420_to_rgb(frame) -> torch.Tensor:
+  """
+  yuv420 to rgb matching nvdec output.
+  uses bilinear chroma upsampling + BT.601 limited range.
+  """
+  H, W = frame.height, frame.width
+  y = np.frombuffer(frame.planes[0], dtype=np.uint8).reshape(H, frame.planes[0].line_size)[:, :W]
+  u = np.frombuffer(frame.planes[1], dtype=np.uint8).reshape(H//2, frame.planes[1].line_size)[:, :W//2]
+  v = np.frombuffer(frame.planes[2], dtype=np.uint8).reshape(H//2, frame.planes[2].line_size)[:, :W//2]
+
+  y_t = torch.from_numpy(y.copy()).float()
+  u_t = torch.from_numpy(u.copy()).float().unsqueeze(0).unsqueeze(0)
+  v_t = torch.from_numpy(v.copy()).float().unsqueeze(0).unsqueeze(0)
+
+  u_up = F.interpolate(u_t, size=(H, W), mode='bilinear', align_corners=False).squeeze()
+  v_up = F.interpolate(v_t, size=(H, W), mode='bilinear', align_corners=False).squeeze()
+
+  yf = (y_t - 16.0) * (255.0 / 219.0)
+  uf = (u_up - 128.0) * (255.0 / 224.0)
+  vf = (v_up - 128.0) * (255.0 / 224.0)
+
+  r = (yf + 1.402 * vf).clamp(0, 255)
+  g = (yf - 0.344136 * uf - 0.714136 * vf).clamp(0, 255)
+  b = (yf + 1.772 * uf).clamp(0, 255)
+  return torch.stack([r, g, b], dim=-1).round().to(torch.uint8)
+
 class AVVideoDataset(VideoDataset):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
-    assert self.device.type == 'cpu', f"AVVideoDataset only supports cpu, got {self.device}"
+    assert self.device.type == 'cpu', f"AVVideoDataset only for cpu, got {self.device}"
 
   def __iter__(self):
     import av
@@ -170,8 +198,8 @@ class AVVideoDataset(VideoDataset):
       idx = 0
 
       for frame in container.decode(stream):
-        arr = frame.to_ndarray(format='rgb24')  # (H, W, 3) uint8
-        seq_buf.append(torch.from_numpy(arr))
+        arr = yuv420_to_rgb(frame)  # (H, W, 3) uint8, matches nvdec
+        seq_buf.append(arr)
         if len(seq_buf) == seq_len:
           batch_buf.append(torch.stack(seq_buf))  # (seq_len, H, W, 3)
           seq_buf = []
@@ -186,6 +214,43 @@ class AVVideoDataset(VideoDataset):
         yield path, idx, torch.stack(batch_buf)
 
       container.close()
+
+class TensorVideoDataset(VideoDataset):
+  """Loads raw uint8 tensor files (.raw) via mmap and batches into (B, S, H, W, C)."""
+  def __init__(self,*args, **kwargs):
+    super().__init__(format='raw', *args, **kwargs)
+
+  def __iter__(self):
+    import numpy as np
+    W, H = camera_size
+    C = 3
+    frame_bytes = H * W * C
+    for path in self.paths:
+      file_size = os.path.getsize(path)
+      N = file_size // frame_bytes
+      mm = np.memmap(path, dtype=np.uint8, mode='r', shape=(N, H, W, C))
+      frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory
+
+      batch_buf = []
+      seq_buf = []
+      idx = 0
+
+      for i in range(frames.shape[0]):
+        seq_buf.append(frames[i])
+        if len(seq_buf) == seq_len:
+          batch_buf.append(torch.stack(seq_buf))  # (seq_len, H, W, C)
+          seq_buf = []
+          if len(batch_buf) == self.batch_size:
+            idx += 1
+            yield path, idx, torch.stack(batch_buf)  # (B, seq_len, H, W, C)
+            batch_buf = []
+
+      # partial batch
+      if batch_buf:
+        idx += 1
+        yield path, idx, torch.stack(batch_buf)
+
+      del frames, mm
 
 if __name__ == "__main__":
   batch_size = 13

@@ -7,8 +7,12 @@ on:
         description: 'PR number to evaluate (supports fork PRs)'
         required: false
         type: string
-      compressed_dir:
-        description: 'Link to compressed_dir zip (e.g. https://github.com/user-attachments/files/26130120/submission.zip)'
+      submission_name:
+        description: 'Name for this submission (e.g. "my_submission")'
+        required: false
+        type: string
+      submission_url:
+        description: 'Link to submission zip (e.g. https://github.com/user-attachments/files/26130120/submission.zip)'
         required: true
         type: string
 
@@ -21,10 +25,11 @@ jobs:
           lfs: true
           ref: ${{ inputs.pr_number && format('refs/pull/{0}/merge', inputs.pr_number) || 'master' }}
 
-      - name: Download and extract compressed_dir
+       # TODO: make an arg
+      - name: Download submission
         run: |
-          curl -L -H "Authorization: token ${{ github.token }}" -o submission.zip "${{ inputs.compressed_dir }}"
-          unzip submission.zip -d .
+          mkdir -p ./submissions/baseline
+          curl -L -o ./submissions/baseline/archive.zip "${{ inputs.submission_url }}"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -37,8 +42,6 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
+      # TODO: make an arg
       - name: Evaluate
-        run: uv run --group cpu python evaluate.py --device cpu --dataloader examples/baseline_dataloader_fast.py
-
-      - name: Print report
-        run: cat report.txt
+        run: uv run --group cpu bash evaluate.sh --device cpu --submission-dir ./submissions/baseline
