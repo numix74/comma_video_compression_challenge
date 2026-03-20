@@ -5,7 +5,7 @@ on:
     inputs:
       pr_number:
         description: 'PR number to evaluate (supports fork PRs)'
-        required: true
+        required: false
         type: string
       compressed_dir:
         description: 'Link to compressed_dir zip (e.g. https://github.com/user-attachments/files/26130120/submission.zip)'
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
-          ref: refs/pull/${{ inputs.pr_number }}/merge
+          ref: ${{ inputs.pr_number && format('refs/pull/{0}/merge', inputs.pr_number) || 'master' }}
 
       - name: Download and extract compressed_dir
         run: |
