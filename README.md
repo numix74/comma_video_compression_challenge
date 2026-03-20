@@ -95,7 +95,7 @@ bash inflate.sh <archive_dir> <output_dir> <video_names_file>
 
 - `archive_dir`: path where `archive.zip` has been extracted
 - `output_dir`: path where inflated frames must be written
-- `video_names_file`: text file listing video paths, one per line
+- `video_names_file`: text file listing video paths, only one video path for this challenge
 
 For each line in `video_names_file`, `inflate.sh` must produce a raw video file at `<output_dir>/<segment_id>/video.raw`. A `.raw` file is a flat binary dump of uint8 RGB frames with shape `(N, H, W, 3)` where N is the number of frames, H and W match the original video dimensions, no header.
 
