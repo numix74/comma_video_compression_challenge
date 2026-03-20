@@ -198,7 +198,7 @@ class AVVideoDataset(VideoDataset):
       idx = 0
 
       for frame in container.decode(stream):
-        arr = yuv420_to_rgb(frame)  # (H, W, 3) uint8, matches DALI
+        arr = yuv420_to_rgb(frame)  # (H, W, 3) uint8, matches nvdec
         seq_buf.append(arr)
         if len(seq_buf) == seq_len:
           batch_buf.append(torch.stack(seq_buf))  # (seq_len, H, W, 3)
