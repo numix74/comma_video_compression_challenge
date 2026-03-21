@@ -77,7 +77,7 @@ If everything worked as expected, this should producce a `report.txt` file with 
   Submission file size: 11580703 bytes
   Original uncompressed size: 37533786 bytes
   Compression Rate: 0.30854076
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.84270434
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.84
 ```
 
 ## submission format and rules
