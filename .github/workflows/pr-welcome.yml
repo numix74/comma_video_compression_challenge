@@ -35,9 +35,12 @@ jobs:
             });
 
             // Assign a reviewer — replace with your GitHub username(s)
-            await github.rest.pulls.requestReviewers({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-              reviewers: ['YassineYousfi'],
-            });
+            const reviewers = ['YassineYousfi'].filter(r => r !== author);
+            if (reviewers.length > 0) {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                reviewers,
+              });
+            }
