@@ -19,7 +19,7 @@ def main():
   args = parser.parse_args()
 
   if args.device is not None:
-    use_cuda = args.device != 'cpu'
+    use_cuda = args.device.startswith('cuda')
   else:
     use_cuda = torch.cuda.is_available()
 
@@ -31,6 +31,13 @@ def main():
     device = torch.device("cuda", local_rank)
     torch.cuda.set_device(device)
     DefaultDatasetClass = DaliVideoDataset
+  elif args.device == 'mps' or (args.device is None and torch.backends.mps.is_available()):
+    local_rank = 0
+    rank = 0
+    world_size = 1
+    is_distributed = False
+    device = torch.device("mps")
+    DefaultDatasetClass = AVVideoDataset
   else:
     local_rank = 0
     rank = 0
