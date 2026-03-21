@@ -90,7 +90,7 @@ A submission is a directory containing two assets:
 
 c.f. `./evaluate.sh` for how the evaluation process works.
 
-For each line in `video_names_file`, `inflate.sh` must produce a raw video file at `<output_dir>/<segment_id>/video.raw`. A `.raw` file is a flat binary dump of uint8 RGB frames with shape `(N, H, W, 3)` where N is the number of frames, H and W match the original video dimensions, no header.
+`inflate.sh` must produce a raw video file at `<output_dir>/<segment_id>/video.raw`. A `.raw` file is a flat binary dump of uint8 RGB frames with shape `(N, H, W, 3)` where N is the number of frames, H and W match the original video dimensions, no header.
 
 Open a Pull Request with your submission and follow the template instructions to be evaluated. If your submission includes a working compression script, and is competitive we'll merge it into the repo. Otherwise, only the leaderboard will be updated with your score and a link to your PR.
 
