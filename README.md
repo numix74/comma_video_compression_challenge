@@ -72,44 +72,35 @@ If everything worked as expected, this should producce a `report.txt` file with 
   uncompressed_dir: /home/batman/comma2k25_compression_challenge/test_videos
   video_names_file: /home/batman/comma2k25_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
-  Average PoseNet Distortion: 0.06424776
+  Average PoseNet Distortion: 0.05594524
   Average SegNet Distortion: 0.00381220
   Submission file size: 11580703 bytes
   Original uncompressed size: 37533786 bytes
   Compression Rate: 0.30854076
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.89628579
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.84270434
 ```
 
 ## submission format and rules
 
-A submission is a directory containing two files:
+A submission is a directory containing two assets:
 
-- **`archive.zip`** — your compressed data. Its size is used to compute the rate term of the score. It will be unzipped into `archive/` by the evaluation script.
+- **a download link to `archive.zip`** — your compressed data. Its size is used to compute the rate term of the score. It will be unzipped into `archive/` by the evaluation script.
 - **`inflate.sh`** — a bash script that converts the extracted `archive/` contents into raw video frames.
+- **optional**: a compression script that produces `archive.zip` from the original videos, and any other assets you want to include (code, models, etc.)
 
-`inflate.sh` is called with three positional arguments:
-
-```bash
-bash inflate.sh <archive_dir> <output_dir> <video_names_file>
-```
-
-- `archive_dir`: path where `archive.zip` has been extracted
-- `output_dir`: path where inflated frames must be written
-- `video_names_file`: text file listing video paths, only one video path for this challenge
+c.f. `./evaluate.sh` for how the evaluation process works.
 
 For each line in `video_names_file`, `inflate.sh` must produce a raw video file at `<output_dir>/<segment_id>/video.raw`. A `.raw` file is a flat binary dump of uint8 RGB frames with shape `(N, H, W, 3)` where N is the number of frames, H and W match the original video dimensions, no header.
 
-Open a Pull Request with your submission and follow the template instructions to be evaluated.
+Open a Pull Request with your submission and follow the template instructions to be evaluated. If your submission includes a working compression script, and is competitive we'll merge it into the repo. Otherwise, only the leaderboard will be updated with your score and a link to your PR.
 
 See [submissions/baseline/](submissions/baseline/) or [submissions/baseline_fast/](submissions/baseline_fast/) for working examples.
 
 ### evaluation
 
 ```bash
-bash evaluate.sh --submission-dir ./submissions/baseline --device cpu
+bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda
 ```
-
-Use `--device cuda` for faster local evaluation. Official evaluation in CI uses `--device cpu`.
 
 ### rules
 
