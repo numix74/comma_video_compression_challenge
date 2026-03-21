@@ -148,12 +148,14 @@ class DistortionNet(nn.Module):
     return self.posenet.compute_distortion(posenet_out_x, posenet_out_y), self.segnet.compute_distortion(segnet_out_x, segnet_out_y)
 
 if __name__ == "__main__":
-  from frame_utils import DaliVideoDataset, seq_len, camera_size
+  from frame_utils import DaliVideoDataset, AVVideoDataset, seq_len, camera_size
   batch_size = 8
-  device = torch.device('cuda', 0)
+  device = torch.device('cuda', 0) if torch.cuda.is_available() else torch.device('cpu')
   files = (HERE / 'public_test_video_names.txt').read_text().splitlines()
   uncompressed_data_dir = Path('./test_videos/')
-  ds = DaliVideoDataset(files, data_dir=uncompressed_data_dir, batch_size=batch_size, device=device)
+  DsClaas = DaliVideoDataset if torch.cuda.is_available() else AVVideoDataset
+  ds = DsClaas(files, data_dir=uncompressed_data_dir, batch_size=batch_size, device=device)
+  ds.prepare_data()
   segnet = SegNet().eval().to(device)
   segnet_sd = load_file(segnet_sd_path, device=str(device))
   segnet.load_state_dict(segnet_sd)
