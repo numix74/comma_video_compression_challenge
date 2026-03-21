@@ -9,7 +9,11 @@ from frame_utils import rgb_to_yuv6, camera_size, segnet_model_input_size
 
 Head = namedtuple('Head', ['name', 'hidden', 'out'])
 HERE = Path(__file__).resolve().parent
-EOG_AVAILABLE = shutil.which("eog") is not None
+def get_viewer():
+  from PIL import ImageShow
+  if shutil.which("eog"): return ImageShow.EogViewer()
+  if shutil.which("xdg-open"): return ImageShow.XDGViewer()
+  return None
 segnet_sd_path = HERE / 'models/segnet.safetensors'
 posenet_sd_path = HERE / 'models/posenet.safetensors'
 
@@ -81,9 +85,8 @@ class PoseNet(nn.Module):
 
   @torch.inference_mode()
   def debug_run(self, x, idx=0, keys=['pose']):
-    from PIL import ImageShow, Image
+    from PIL import Image
     import os, tempfile
-    viewer = ImageShow.EogViewer() if EOG_AVAILABLE else ImageShow.XDGViewer()
     f, filename = tempfile.mkstemp('.gif')
     os.close(f)
     x = self.preprocess_input(x)
@@ -92,7 +95,9 @@ class PoseNet(nn.Module):
     imgs = einops.rearrange(x, 'b (t c) h w -> b t c h w', t=seq_len, c=6)[idx, :, c, ...].to(dtype=torch.uint8).cpu().numpy()
     imgs = [Image.fromarray(img) for img in imgs]
     imgs[0].save(filename, format="GIF", save_all=True, append_images=imgs[1:],  loop=0, duration=int(1000 / 1), optimize=True, disposal=2)
-    viewer.show_file(filename)
+    viewer = get_viewer()
+    if viewer: viewer.show_file(filename)
+    else: print(f"saved to {filename}")
     print({h.name: out[h.name][idx,..., : h.out // 2] for h in self.hydra.heads if h.name in keys})
 
 class SegNet(smp.Unet):
@@ -109,13 +114,18 @@ class SegNet(smp.Unet):
 
   @torch.inference_mode()
   def debug_run(self, x, idx=0):
-    from PIL import ImageShow, Image
-    ImageShow.register(ImageShow.EogViewer() if EOG_AVAILABLE else ImageShow.XDGViewer(), order=0)
+    from PIL import Image
+    import os, tempfile
+    f, filename = tempfile.mkstemp('.png')
+    os.close(f)
     x = self.preprocess_input(x)
     out = self(x)
     img = 0.5 * x + 0.5 * out.argmax(dim=1, keepdim=True) * (255 / 5)
     img = img[idx].to(dtype=torch.uint8).permute(1, 2, 0).cpu().numpy()
-    Image.fromarray(img).show(title='segnet debug')
+    Image.fromarray(img).save(filename)
+    viewer = get_viewer()
+    if viewer: viewer.show_file(filename)
+    else: print(f"saved to {filename}")
 
 class DistortionNet(nn.Module):
   def __init__(self):
