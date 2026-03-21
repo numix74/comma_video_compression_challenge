@@ -21,7 +21,7 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4421c23-8fbe-4293-b8de-9a77e6d568ab"/>
 </p>
 
-## Quickstart
+## Quickstart (Linux)
 ```
 # clone the repo
 git clone https://github.com/commaai/comma2k25_compression_challenge.git
@@ -30,6 +30,9 @@ cd comma2k25_compression_challenge
 # git lfs
 git lfs install
 git lfs pull
+
+# install ffmpeg
+sudo apt-get update && sudo apt-get install -y ffmpeg
 
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
