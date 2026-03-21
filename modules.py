@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
   for (_,_,batch) in ds:
     assert batch.shape == (batch_size, seq_len, camera_size[1], camera_size[0], 3), f"unexpected batch shape: {batch.shape}"
-    batch = einops.rearrange(batch, 'b t h w c -> b t c h w', b=batch_size, t=seq_len, c=3).float()
+    batch = einops.rearrange(batch, 'b t h w c -> b t c h w', b=batch_size, t=seq_len, c=3).float().to(device)
     segnet.debug_run(batch)
     posenet.debug_run(batch)
     break

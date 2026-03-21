@@ -27,18 +27,18 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 git clone https://github.com/commaai/comma2k25_compression_challenge.git
 cd comma2k25_compression_challenge
 
+# install git-lfs and ffmpeg
+sudo apt-get update && sudo apt-get install -y git-lfs ffmpeg                        # Linux
+brew install git-lfs ffmpeg                                                          # macOS (with Homebrew)
+
 # git lfs
 git lfs install
 git lfs pull
 
-# install ffmpeg
-sudo apt-get update && sudo apt-get install -y ffmpeg   # Linux
-brew install ffmpeg                                     # macOS
-
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# pick one: cu126 / cu128 / cu130 / cpu / mps (macOS Apple Silicon)
+# pick one: cu126 / cu128 / cu130 / cpu / mps
 uv sync --group cu128
 
 # activate
