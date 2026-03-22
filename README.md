@@ -123,10 +123,10 @@ bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda|mps
 
 ## going further
 
-Check out this large grid search over various ffmpeg parameters. Each point in the figure corresponds to a ffmpeg setting, the best was submitted as the baseline. You can inspect the grid search [here](https://github.com/user-attachments/files/26168186/grid_search_results.csv) and look for patterns.
+Check out this large grid search over various ffmpeg parameters. Each point in the figure corresponds to a ffmpeg setting, the best was submitted as the baseline. You can inspect the grid search [here](https://github.com/user-attachments/files/26169452/grid_search_results.csv) and look for patterns.
 
 <p align="center">
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4768eb3-3087-4f29-aa76-7beea695f5b4"/>
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/ee097dbd-9912-4e7f-a24c-834c178d9668"/>
 </p>
 
 You can also use [test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip), which is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset, to test your compression strategy on more samples.
