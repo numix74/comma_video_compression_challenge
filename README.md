@@ -1,27 +1,25 @@
 # comma2k25 compression challenge 🤏
 
-<p align="center">
-<img height="300" alt="image" src="https://github.com/user-attachments/assets/f72fae51-96bd-47c6-b4ff-6e17e79220cb" />
-</p>
+ `./test_videos/b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc` is a 1 minute long driving video of size 37.5 MB. Make it as small as possible while preserving semantic content and temporal dynamics.
 
- `./test_videos/b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc` is a 1 minute long driving video of size 37.5 MB. Make it as small as possible while preserving semantic content (evaluated by a segmentation model) and temporal dynamics (evaluated by an egomotion relative pose model).
-
-- distortion:
-  - SegNet distortion: average class disagreements between the predictions of a SegNet evaluated on original vs. reconstructed frames
-  - PoseNet distortion: MSE of the outputs of a PoseNet (x,y,z velocities and roll,pitch,yaw rates) evaluated on original vs. reconstructed seq_len frames
-- rate
-  - the size of the compressed archive devided by the size of the original archive
-- score: a weighted average of the different components of the distortion and the rate
+- semantic content distortion is measured using:
+  - a SegNet: average class disagreements between the predictions of a SegNet evaluated on original vs. reconstructed frames
+- temporal dynamics distortion is measured using:
+  - a PoseNet: MSE of the outputs of a PoseNet (x,y,z velocities and roll,pitch,yaw rates) evaluated on original vs. reconstructed 2 consecutive frames
+- the compression rate is:
+  - the size of the compressed archive divided by the size of the original archive
+- the final score is computed as:
+  - a weighted average of the different components of the distortion and the rate
 
 ```
 score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 ```
 
 <p align="center">
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4421c23-8fbe-4293-b8de-9a77e6d568ab"/>
+<img height="300" alt="image" src="https://github.com/user-attachments/assets/f72fae51-96bd-47c6-b4ff-6e17e79220cb" />
 </p>
 
-## Quickstart
+## quickstart
 ```
 # clone the repo
 git clone https://github.com/commaai/comma2k25_compression_challenge.git
@@ -38,7 +36,7 @@ git lfs pull
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# pick one: cu126 / cu128 / cu130 / cpu / mps
+# pick one based on your system(cuda/macOS/cpu): cu126|cu128|cu130|cpu|mps
 uv sync --group cu128
 
 # activate
@@ -105,7 +103,7 @@ Note that the evaluation has a time limit of 30 minutes. If your inflation scrip
 ### evaluation
 
 ```bash
-bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda
+bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda|mps
 ```
 
 ### rules
@@ -114,6 +112,13 @@ bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda
 - You can use anything for compression, including the models and the original uncompressed videos.
 - You may include your compression script in the submission, but it's not required.
 - `inflate.sh` should not consume anything outside of the submission directory and the extracted archive.
+
+## leaderboard
+
+<p align="center">
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4421c23-8fbe-4293-b8de-9a77e6d568ab"/>
+</p>
+
 
 ## going further
 
