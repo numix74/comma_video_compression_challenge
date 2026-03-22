@@ -1,4 +1,4 @@
-# comma2k25 compression challenge 🤏
+# commaH26x_compression_challenge
 
  `./test_videos/b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc` is a 1 minute long driving video of size 37.5 MB. Make it as small as possible while preserving semantic content and temporal dynamics.
 
@@ -23,8 +23,8 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 ## quickstart
 ```
 # clone the repo
-git clone https://github.com/commaai/comma2k25_compression_challenge.git
-cd comma2k25_compression_challenge
+git clone https://github.com/commaai/commaH26x_compression_challenge.git
+cd commaH26x_compression_challenge
 
 # install git-lfs and ffmpeg
 sudo apt-get update && sudo apt-get install -y git-lfs ffmpeg                        # Linux
@@ -72,8 +72,8 @@ If everything worked as expected, this should producce a `report.txt` file with 
   report: submissions/my_submission/report.txt
   seed: 1234
   submission_dir: submissions/my_submission
-  uncompressed_dir: /home/batman/comma2k25_compression_challenge/test_videos
-  video_names_file: /home/batman/comma2k25_compression_challenge/public_test_video_names.txt
+  uncompressed_dir: /home/batman/commaH26x_compression_challenge/test_videos
+  video_names_file: /home/batman/commaH26x_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.05594524
   Average SegNet Distortion: 0.00381220

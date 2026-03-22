@@ -6,8 +6,8 @@
   report: submissions/baseline_fast/report.txt
   seed: 1234
   submission_dir: submissions/baseline_fast
-  uncompressed_dir: /home/batman/comma2k25_compression_challenge/test_videos
-  video_names_file: /home/batman/comma2k25_compression_challenge/public_test_video_names.txt
+  uncompressed_dir: /home/batman/commaH26x_compression_challenge/test_videos
+  video_names_file: /home/batman/commaH26x_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.05594524
   Average SegNet Distortion: 0.00381220
