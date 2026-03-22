@@ -116,13 +116,19 @@ bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda|mps
 
 ## leaderboard
 
-<p align="center">
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4421c23-8fbe-4293-b8de-9a77e6d568ab"/>
-</p>
-
+| Name     | Score | PR |
+| -------- |:-------:| -------- |
+| baseline  | 3.3   | |
+| baseline_fast | 8.8     | |
 
 ## going further
 
-You can use [test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip), which is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset, to test your compression strategy on more samples.
+Check out this large grid search over various ffmpeg parameters. Each point in the figure corresponds to a ffmpeg setting, the best was submitted as the baseline. You can inspect the grid search [here](https://github.com/user-attachments/files/26168186/grid_search_results.csv) and look for patterns.
+
+<p align="center">
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/e4768eb3-3087-4f29-aa76-7beea695f5b4"/>
+</p>
+
+You can also use [test_videos.zip](https://huggingface.co/datasets/commaai/comma2k19/resolve/main/compression_challenge/test_videos.zip), which is a 2.4 GB archive of 64 driving videos from the comma2k19 dataset, to test your compression strategy on more samples.
 
 The evaluation script and the dataloader are designed to be scalable and can handle different batch sizes, sequence lengths, and video resolutions. You can modify them to fit your needs.
