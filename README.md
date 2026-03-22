@@ -16,11 +16,7 @@ score = 100 * segnet_distortion + sqrt(10 * posenet_distortion) + 25 * rate
 ```
 
 <p align="center">
-<img height="1600" alt="image" src="https://github.com/user-attachments/assets/04cd8e5f-eec5-4108-8086-d9e0c06b567f" />
-</p>
-
-<p align="center">
-<img height="800" alt="image" src="https://github.com/user-attachments/assets/d59befb4-b65b-4835-ba89-bf151ea77fa0" />
+<img height="800" alt="image" src="https://github.com/user-attachments/assets/eac1bf44-3b35-40fd-ab82-4dde4a2f5d07" />
 </p>
 
 
