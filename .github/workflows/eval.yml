@@ -37,15 +37,6 @@ jobs:
         with:
           ref: ${{ inputs.pr_number && format('refs/pull/{0}/merge', inputs.pr_number) || 'master' }}
 
-      - name: Install git-lfs
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git-lfs
-          git lfs install
-
-      - name: Pull LFS files
-        run: git lfs pull
-
       - name: Check submission_name is unique (except for "baseline" for testing)
         run: |
           if [ "${{ inputs.submission_name }}" != "baseline" ] && git ls-tree --name-only origin/master -- "submissions/${{ inputs.submission_name }}/" | grep -q .; then
@@ -62,6 +53,15 @@ jobs:
         run: |
           mkdir -p ./submissions/${{ inputs.submission_name }}
           curl -L -o ./submissions/${{ inputs.submission_name }}/archive.zip "${{ inputs.submission_url }}"
+
+      - name: Install git-lfs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Pull LFS files
+        run: git lfs pull
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
