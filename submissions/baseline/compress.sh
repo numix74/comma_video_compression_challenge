@@ -42,8 +42,8 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
   ffmpeg -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$IN" \
     -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos" \
-    -c:v libx265 -preset slower -crf 26 \
-    -x265-params "keyint=180:min-keyint=180:scenecut=0:rc-lookahead=60:bframes=4:log-level=warning" \
+    -c:v libx265 -preset veryslow -crf 27 \
+    -x265-params "keyint=180:min-keyint=180:scenecut=0:rc-lookahead=40:bframes=4:log-level=warning" \
     -r 20 "$OUT/video.mkv"
 ' _ {}
 

@@ -10,13 +10,13 @@ FILE_LIST="$3"
 
 while IFS= read -r line; do
   [ -z "$line" ] && continue
-  SRC="${DATA_DIR}/$(dirname "$line")/video.hevc"
+  SRC="${DATA_DIR}/$(dirname "$line")/video.mkv"
   DST="${OUTPUT_DIR}/$(dirname "$line")/video.raw"
   mkdir -p "$(dirname "$DST")"
 
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 
-  printf "Decoding %s ... " "$line"
+  printf "Decoding + resizing %s ... " "$line"
   cd "$ROOT"
   python -m submissions.baseline_fast.inflate "$SRC" "$DST"
 done < "$FILE_LIST"

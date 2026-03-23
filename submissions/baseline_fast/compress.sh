@@ -37,13 +37,14 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
   OUT="${ARCHIVE_DIR}/$(dirname "$rel")"
   mkdir -p "$OUT"
 
-  echo "→ ${IN}  →  ${OUT}/video.hevc"
+  echo "→ ${IN}  →  ${OUT}/video.mkv"
 
   ffmpeg -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$IN" \
+    -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos" \
     -c:v libx265 -preset ultrafast -crf 30 \
-    -g 1 -bf 0 -x265-params "keyint=1:min-keyint=1:scenecut=0:frame-threads=1:log-level=warning" \
-    -r 20 -f hevc "$OUT"/video.hevc
+    -g 1 -bf 0 -x265-params "keyint=1:min-keyint=1:scenecut=0:frame-threads=4:log-level=warning" \
+    -r 20 "$OUT"/video.mkv
 ' _ {}
 
 # zip archive

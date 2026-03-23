@@ -69,18 +69,18 @@ If everything worked as expected, this should producce a `report.txt` file with 
   device: cuda
   num_threads: 2
   prefetch_queue_depth: 4
-  report: submissions/my_submission/report.txt
+  report: submissions/baseline_fast/report.txt
   seed: 1234
-  submission_dir: submissions/my_submission
+  submission_dir: submissions/baseline_fast
   uncompressed_dir: /home/batman/commaH26x_compression_challenge/test_videos
   video_names_file: /home/batman/commaH26x_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
-  Average PoseNet Distortion: 0.05594524
-  Average SegNet Distortion: 0.00381220
-  Submission file size: 11580703 bytes
+  Average PoseNet Distortion: 0.38071454
+  Average SegNet Distortion: 0.00946292
+  Submission file size: 2245157 bytes
   Original uncompressed size: 37533786 bytes
-  Compression Rate: 0.30854076
-  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 8.84
+  Compression Rate: 0.05981696
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 4.39
 ```
 
 ## submission format and rules
@@ -118,12 +118,12 @@ bash evaluate.sh --submission-dir ./submissions/baseline --device cpu|cuda|mps
 
 | Name     | Score | PR |
 | -------- |:-------:| -------- |
-| baseline  | 3.3   | |
-| baseline_fast | 8.8     | |
+| baseline  | 3.0   | |
+| baseline_fast | 4.4     | |
 
 ## going further
 
-Check out this large grid search over various ffmpeg parameters. Each point in the figure corresponds to a ffmpeg setting, the best was submitted as the baseline. You can inspect the grid search [here](https://github.com/user-attachments/files/26169452/grid_search_results.csv) and look for patterns.
+Check out this large grid search over various ffmpeg parameters. Each point in the figure corresponds to a ffmpeg setting, the best scoring setting was submitted as the baseline, and the fastest encoder setting was submitted as the baseline_fast. You can inspect the grid search [here](https://github.com/user-attachments/files/26169452/grid_search_results.csv) and look for patterns.
 
 <p align="center">
 <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/ee097dbd-9912-4e7f-a24c-834c178d9668"/>
