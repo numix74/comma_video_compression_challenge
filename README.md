@@ -44,7 +44,7 @@ python frame_utils.py
 python modules.py
 
 # create a submission dir and copy the fast baseline_fast scripts
-mkdir -p submissions/my_submission && cp submissions/baseline_fast/{compress,inflate}.sh submissions/my_submission/
+mkdir -p submissions/my_submission && cp submissions/baseline_fast/{compress.sh,inflate.{sh,py}} submissions/my_submission/
 
 # naively recompress (creates submissions/my_submission/archive.zip)
 bash submissions/my_submission/compress.sh

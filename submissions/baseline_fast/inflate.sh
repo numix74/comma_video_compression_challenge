@@ -6,6 +6,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
+SUB_NAME="$(basename "$HERE")"
 
 DATA_DIR="$1"
 OUTPUT_DIR="$2"
@@ -23,5 +24,5 @@ while IFS= read -r line; do
 
   printf "Decoding + resizing %s ... " "$line"
   cd "$ROOT"
-  python -m submissions.baseline_fast.inflate "$SRC" "$DST"
+  python -m "submissions.${SUB_NAME}.inflate" "$SRC" "$DST"
 done < "$FILE_LIST"
