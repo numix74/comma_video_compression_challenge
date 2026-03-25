@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to evaluate (supports fork PRs)'
+        description: 'PR number to evaluate'
         required: false
         type: string
       submission_name:
@@ -33,48 +33,59 @@ jobs:
       EVAL_DEVICE: ${{ inputs.runner == 'linux-nvidia-t4' && 'cuda' || 'cpu' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - id: checkout
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.pr_number && format('refs/pull/{0}/merge', inputs.pr_number) || 'master' }}
 
-      - name: Check submission_name is unique (except for "baseline" for testing)
+      - id: check_name
+        name: Check submission_name is unique (except for "baseline" for testing)
         run: |
+          git fetch origin master --depth=1
           if [ "${{ inputs.submission_name }}" != "baseline" ] && git ls-tree --name-only origin/master -- "submissions/${{ inputs.submission_name }}/" | grep -q .; then
             echo "::error::submission_name '${{ inputs.submission_name }}' already exists in master"
             exit 1
           fi
 
-      - name: Check GPU
+      - id: check_gpu
+        name: Check GPU
         if: ${{ inputs.runner == 'linux-nvidia-t4' }}
         run: |
           nvidia-smi
 
-      - name: Download submission
+      - id: download
+        name: Download submission
         run: |
           mkdir -p ./submissions/${{ inputs.submission_name }}
           curl -L -o ./submissions/${{ inputs.submission_name }}/archive.zip "${{ inputs.submission_url }}"
 
-      - name: Install git-lfs
+      - id: install_lfs
+        name: Install git-lfs
         run: |
           sudo apt-get update
           sudo apt-get install -y git-lfs
           git lfs install
 
-      - name: Pull LFS files
+      - id: pull_lfs
+        name: Pull LFS files
         run: git lfs pull
 
-      - name: Install uv
+      - id: install_uv
+        name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
 
-      - name: Install dependencies
+      - id: install_deps
+        name: Install dependencies
         run: uv sync --group "$UV_GROUP"
 
-      - name: Install ffmpeg
+      - id: install_ffmpeg
+        name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Evaluate
+      - id: evaluate
+        name: Evaluate
         run: uv run --group "$UV_GROUP" bash evaluate.sh --device "$EVAL_DEVICE" --submission-dir ./submissions/${{ inputs.submission_name }}
 
       - name: Upload artifacts
@@ -86,20 +97,46 @@ jobs:
             ./submissions/${{ inputs.submission_name }}/archive.zip
             ./submissions/${{ inputs.submission_name }}/report.txt
 
+  comment:
+    needs: test
+    if: always() && inputs.pr_number
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: eval-${{ inputs.submission_name }}
+          path: ./artifacts
+        continue-on-error: true
+
       - name: Comment on PR
-        if: inputs.pr_number
         uses: actions/github-script@v7
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
         with:
           script: |
             const fs = require('fs');
-            const reportPath = './submissions/${{ inputs.submission_name }}/report.txt';
-            let report = 'No report.txt found.';
-            if (fs.existsSync(reportPath)) {
-              report = fs.readFileSync(reportPath, 'utf8');
+            const testResult = process.env.TEST_RESULT;
+            let body;
+            if (testResult === 'success') {
+              const reportPath = './artifacts/report.txt';
+              let report = 'No report.txt found.';
+              if (fs.existsSync(reportPath)) {
+                report = fs.readFileSync(reportPath, 'utf8');
+              }
+              body = `## Eval Results: \`${{ inputs.submission_name }}\`\n\n\`\`\`\n${report}\n\`\`\``;
+            } else {
+              let reason;
+              if (testResult === 'cancelled') {
+                reason = 'Job timed out or was cancelled';
+              } else {
+                reason = `Job failed`;
+              }
+              body = `## Eval Failed: \`${{ inputs.submission_name }}\`\n\n${reason}\n\n[View logs](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
             }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: parseInt('${{ inputs.pr_number }}'),
-              body: `## Eval Results: \`${{ inputs.submission_name }}\`\n\n\`\`\`\n${report}\n\`\`\``
+              body
             });
