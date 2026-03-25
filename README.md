@@ -8,7 +8,7 @@
   - a PoseNet: MSE of the outputs of a PoseNet evaluated on original vs. reconstructed 2 consecutive frames
 - the compression rate is:
   - the size of the compressed archive divided by the size of the original archive
-- the final score is computed as:
+- the final score is computed as (lower is better):
   - score = 100 * segnet_distortion + 25 * rate + √ (10 * posenet_distortion)
 
 <p align="center">
@@ -101,7 +101,7 @@ The official evaluation has a time limit of 30 minutes. If your inflation script
 - You can use anything for compression, including the models, original uncompressed video, and any other assets you want to include.
 - You may include your compression script in the submission, but it's not required.
 
-## leaderboard
+## leaderboard (lower is better)
 
 | Name     | Score | PR |
 | -------- |:-------:| -------- |
