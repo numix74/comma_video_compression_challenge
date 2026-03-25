@@ -1,6 +1,6 @@
 # commaH26x_compression_challenge
 
- `./test_videos/b0c9d2329ad1606b|2018-07-27--06-03-57/10/video.hevc` is a 20 FPS 1 minute long driving video of size 37.5 MB. Make it as small as possible while preserving semantic content and temporal dynamics.
+ `./videos/0.mkv` is a 1 minute 37.5 MB dashcam video. Make it as small as possible while preserving semantic content and temporal dynamics.
 
 - semantic content distortion is measured using:
   - a SegNet: average class disagreements between the predictions of a SegNet evaluated on original vs. reconstructed frames
@@ -64,7 +64,7 @@ If everything worked as expected, this should producce a `report.txt` file with 
   report: submissions/baseline_fast/report.txt
   seed: 1234
   submission_dir: submissions/baseline_fast
-  uncompressed_dir: /home/batman/commaH26x_compression_challenge/test_videos
+  uncompressed_dir: /home/batman/commaH26x_compression_challenge/videos
   video_names_file: /home/batman/commaH26x_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.38071454

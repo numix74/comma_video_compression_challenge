@@ -11,7 +11,7 @@ def main():
   parser.add_argument("--num-threads", type=int, default=2, help="DALI worker threads")
   parser.add_argument("--prefetch-queue-depth", type=int, default=4, help="DALI prefetch depth")
   parser.add_argument("--submission-dir", type=Path, default=Path('./submissions/baseline/'), help="compressed videos path")
-  parser.add_argument("--uncompressed-dir", type=Path, default=Path('./test_videos/'), help="original uncompressed videos path")
+  parser.add_argument("--uncompressed-dir", type=Path, default=Path('./videos/'), help="original uncompressed videos path")
   parser.add_argument("--seed", type=int, default=1234, help="RNG seed")
   parser.add_argument("--device", type=str, default=None, help="device: 'cpu', 'cuda', or 'mps' (default: auto-detect)")
   parser.add_argument("--report", type=Path, default=Path("./report.txt"), help="output report file path")

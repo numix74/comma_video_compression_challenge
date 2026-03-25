@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Must produce a raw video file at `<output_dir>/<segment_id>/video.raw`.
+# Must produce a raw video file at `<output_dir>/<base_name>.raw`.
 # A `.raw` file is a flat binary dump of uint8 RGB frames with shape `(N, H, W, 3)`
 # where N is the number of frames, H and W match the original video dimensions, no header.
 set -euo pipefail
@@ -11,11 +11,13 @@ DATA_DIR="$1"
 OUTPUT_DIR="$2"
 FILE_LIST="$3"
 
+mkdir -p "$OUTPUT_DIR"
+
 while IFS= read -r line; do
   [ -z "$line" ] && continue
-  SRC="${DATA_DIR}/$(dirname "$line")/video.hevc"
-  DST="${OUTPUT_DIR}/$(dirname "$line")/video.raw"
-  mkdir -p "$(dirname "$DST")"
+  BASE="${line%.*}"
+  SRC="${DATA_DIR}/${BASE}.mkv"
+  DST="${OUTPUT_DIR}/${BASE}.raw"
 
   [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
 

@@ -4,7 +4,7 @@ from frame_utils import yuv420_to_rgb
 
 
 def decode_to_file(video_path: str, dst: str):
-  container = av.open(video_path, format='hevc')
+  container = av.open(video_path)
   stream = container.streams.video[0]
   n = 0
   with open(dst, 'wb') as f:

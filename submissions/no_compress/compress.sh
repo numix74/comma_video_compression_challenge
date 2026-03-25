@@ -4,7 +4,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PD="$(cd "${HERE}/../.." && pwd)"
 
-IN_DIR="${PD}/test_videos"
+IN_DIR="${PD}/videos"
 VIDEO_NAMES_FILE="${PD}/public_test_video_names.txt"
 ARCHIVE_DIR="${HERE}/archive"
 
@@ -26,10 +26,9 @@ mkdir -p "$ARCHIVE_DIR"
 while IFS= read -r rel; do
   [ -z "$rel" ] && continue
   SRC="${IN_DIR}/${rel}"
-  DST_DIR="${ARCHIVE_DIR}/$(dirname "$rel")"
-  mkdir -p "$DST_DIR"
-  echo "→ Copying ${SRC} → ${DST_DIR}/video.hevc"
-  cp "$SRC" "$DST_DIR/video.hevc"
+  BASE="${rel%.*}"
+  echo "→ Copying ${SRC} → ${ARCHIVE_DIR}/${BASE}.mkv"
+  cp "$SRC" "${ARCHIVE_DIR}/${BASE}.mkv"
 done < "$VIDEO_NAMES_FILE"
 
 cd "$ARCHIVE_DIR"
