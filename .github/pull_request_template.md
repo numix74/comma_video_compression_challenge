@@ -19,5 +19,6 @@
 # did you include the compression script? and want it to be merged?
 <!-- yes|no -->
 
-# additional comments (optional)
+# additional comments
 <!-- anything else you want to share -->
+<!-- describe your solution -->

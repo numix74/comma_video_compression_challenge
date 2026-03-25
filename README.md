@@ -1,6 +1,6 @@
 # commaH26x_compression_challenge
 
- `./videos/0.mkv` is a 1 minute 37.5 MB dashcam video. Make it as small as possible while preserving semantic content and temporal dynamics.
+ `./videos/0.mkv` is a 1 minute 35.8 MB dashcam video. Make it as small as possible while preserving semantic content and temporal dynamics.
 
 - semantic content distortion is measured using:
   - a SegNet: average class disagreements between the predictions of a SegNet evaluated on original vs. reconstructed frames
@@ -49,8 +49,8 @@ mkdir -p submissions/my_submission && cp submissions/baseline_fast/{compress,inf
 # naively recompress (creates submissions/my_submission/archive.zip)
 bash submissions/my_submission/compress.sh
 
-# evaluate the submission (device: cuda / mps / cpu)
-bash evaluate.sh --submission-dir ./submissions/my_submission --device cuda
+# evaluate the submission (--device: cpu|cuda|mps)
+bash evaluate.sh --submission-dir ./submissions/my_submission --device cpu
 ```
 
 If everything worked as expected, this should producce a `report.txt` file with this content:
@@ -58,7 +58,7 @@ If everything worked as expected, this should producce a `report.txt` file with 
 ```
 === Evaluation config ===
   batch_size: 16
-  device: cuda
+  device: cpu
   num_threads: 2
   prefetch_queue_depth: 4
   report: submissions/baseline_fast/report.txt
@@ -67,11 +67,11 @@ If everything worked as expected, this should producce a `report.txt` file with 
   uncompressed_dir: /home/batman/commaH26x_compression_challenge/videos
   video_names_file: /home/batman/commaH26x_compression_challenge/public_test_video_names.txt
 === Evaluation results over 600 samples ===
-  Average PoseNet Distortion: 0.38071454
-  Average SegNet Distortion: 0.00946292
-  Submission file size: 2,245,157 bytes
-  Original uncompressed size: 37,533,786 bytes
-  Compression Rate: 0.05981696
+  Average PoseNet Distortion: 0.38042614
+  Average SegNet Distortion: 0.00946623
+  Submission file size: 2,244,900 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.05979147
   Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 4.39
 ```
 
