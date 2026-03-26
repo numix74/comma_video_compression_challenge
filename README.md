@@ -29,7 +29,7 @@
 </p>
 
 ## prize pool - submit by May, 3rd 2026 11:59pm AOE
-- 1st place: [comma four OR $750] + special swag
+- 1st place: [comma four OR $1,000] + special swag
 - 2nd place: [$500] + special swag
 - 3rd place: [$250] + special swag
 
