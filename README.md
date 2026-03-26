@@ -17,44 +17,44 @@
 
 
 ## quickstart
+Clone the repo
 ```
-# clone the repo
 git clone https://github.com/commaai/commaH26x_compression_challenge.git && cd commaH26x_compression_challenge
+```
 
-# install git-lfs and ffmpeg
-sudo apt-get update && sudo apt-get install -y git-lfs ffmpeg               # Linux
-brew install git-lfs ffmpeg                                                 # macOS (with Homebrew)
-
-# git lfs
+Install dependencies
+```
+sudo apt-get update && sudo apt-get install -y git-lfs ffmpeg  # Linux
+brew install git-lfs ffmpeg                                    # (or) macOS (with Homebrew)
 git lfs install && git lfs pull
-
-# uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# pick one based on your system (cpu/cuda/macOS): cpu|cu126|cu128|cu130|mps
-uv sync --group cpu
-
-# activate
+uv sync --group cpu                                            # cpu|cu126|cu128|cu130|mps
 source .venv/bin/activate
+```
 
-# test dataloaders
+Test Dataloaders and Models
+```
 python frame_utils.py
-
-# test models
 python modules.py
+```
 
-# create a submission dir and copy the fast baseline_fast scripts
-mkdir -p submissions/my_submission && cp submissions/baseline_fast/{compress.sh,inflate.{sh,py}} submissions/my_submission/
+Create a submission dir and copy the fast baseline_fast scripts
+```
+mkdir -p submissions/my_submission
+cp submissions/baseline_fast/{compress.sh,inflate.{sh,py}} submissions/my_submission/
+```
 
-# naively recompress (creates submissions/my_submission/archive.zip)
+Compress
+```
 bash submissions/my_submission/compress.sh
+```
 
-# evaluate the submission (--device: cpu|cuda|mps)
-bash evaluate.sh --submission-dir ./submissions/my_submission --device cpu
+Evaluate
+```
+bash evaluate.sh --submission-dir ./submissions/my_submission --device cpu  # cpu|cuda|mps
 ```
 
 If everything worked as expected, this should producce a `report.txt` file with this content:
-
 ```
 === Evaluation config ===
   batch_size: 16
