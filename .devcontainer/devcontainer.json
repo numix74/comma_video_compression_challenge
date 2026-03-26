@@ -1,5 +1,5 @@
 {
   "name": "comma-video-compression-challenge",
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "image": "mcr.microsoft.com/devcontainers/python:3",
   "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh"
 }
