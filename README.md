@@ -13,7 +13,7 @@
 
 </div>
 
- `./videos/0.mkv` is a 1 minute 35.8 MB dashcam video. Make it as small as possible while preserving semantic content and temporal dynamics.
+ `./videos/0.mkv` is a 1 minute 37.5 MB dashcam video. Make it as small as possible while preserving semantic content and temporal dynamics.
 
 - semantic content distortion is measured using:
   - a SegNet: average class disagreements between the predictions of a SegNet evaluated on original vs. reconstructed frames
