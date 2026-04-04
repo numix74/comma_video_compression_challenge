@@ -128,6 +128,8 @@ The official evaluation has a time limit of 30 minutes. If your inflation script
 | baseline_fast | 4.4     | |
 | no_compress | 25.0     | |
 
+> mirrored from [comma.ai/leaderboard](https://comma.ai/leaderboard)
+
 ## going further
 
 Check out this large grid search over various ffmpeg parameters. Each point in the figure corresponds to a ffmpeg setting. The fastest encoder setting was submitted as the baseline_fast. You can inspect the grid search [here](https://github.com/user-attachments/files/26169452/grid_search_results.csv) and look for patterns.
