@@ -128,6 +128,7 @@ The official evaluation has a time limit of 30 minutes. If your inflation script
 | svtav1_45pct_unsharp | 2.1 |https://github.com/commaai/comma_video_compression_challenge/pull/20 |
 | svt_av1_lanczos_fg | 2.2  | https://github.com/commaai/comma_video_compression_challenge/pull/18 |
 | h265_g16_512x384_veryslow | 2.6  | https://github.com/commaai/comma_video_compression_challenge/pull/21 |
+| h265_tuned | 3.3  | https://github.com/commaai/comma_video_compression_challenge/pull/22 |
 | baseline_fast | 4.4     | |
 | no_compress | 25.0     | |
 
