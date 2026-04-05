@@ -44,20 +44,20 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
 
   # Step 1: ROI preprocess — denoise outside driving corridor
   rm -f "$PRE_IN"
-  python "'"${HERE}"'/roi_preprocess.py" \
+  python "'"${HERE}"'/preprocess.py" \
     --input "$IN" \
     --output "$PRE_IN" \
     --outside-luma-denoise 2.5 \
     --outside-chroma-mode medium \
-    --feather-radius 48 \
-    --outside-blend 0.60
+    --feather-radius 24 \
+    --outside-blend 0.50
 
   # Step 2: Downscale + denoise + AV1 encode
   FFMPEG="${PD}/ffmpeg-new"
   [ ! -x "$FFMPEG" ] && FFMPEG="ffmpeg"
   "$FFMPEG" -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$PRE_IN" \
-    -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos,hqdn3d=1.5:0:0:0" \
+    -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos" \
     -pix_fmt yuv420p -c:v libsvtav1 -preset 0 -crf 33 \
     -svtav1-params "film-grain=22:keyint=180:scd=0" \
     -r 20 "$OUT"
