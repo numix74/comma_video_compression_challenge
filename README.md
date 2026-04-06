@@ -123,13 +123,15 @@ The official evaluation has a time limit of 30 minutes. If your inflation script
 
 | Name     | Score | PR |
 | -------- |:-------:| -------- |
-| svtav1_cheetah | 2.1 |https://github.com/commaai/comma_video_compression_challenge/pull/24 |
-| av1_sharp1_adaptive | 2.1 |https://github.com/commaai/comma_video_compression_challenge/pull/23 |
-| svtav1_45pct_unsharp | 2.1 |https://github.com/commaai/comma_video_compression_challenge/pull/20 |
-| svt_av1_lanczos_fg | 2.2  | https://github.com/commaai/comma_video_compression_challenge/pull/18 |
-| h265_g16_512x384_veryslow | 2.6  | https://github.com/commaai/comma_video_compression_challenge/pull/21 |
-| h265_tuned | 3.3  | https://github.com/commaai/comma_video_compression_challenge/pull/22 |
-| baseline_fast | 4.4     | |
+| damir_bearclaw_002 | 1.98 |https://github.com/commaai/comma_video_compression_challenge/pull/30 |
+| svtav1_cheetah | 2.05 |https://github.com/commaai/comma_video_compression_challenge/pull/24 |
+| svtav1_45pct_unsharp20_direct | 2.07 |https://github.com/commaai/comma_video_compression_challenge/pull/27 |
+| av1_sharp1_adaptive | 2.08 |https://github.com/commaai/comma_video_compression_challenge/pull/23 |
+| svtav1_45pct_unsharp | 2.09 |https://github.com/commaai/comma_video_compression_challenge/pull/20 |
+| svt_av1_lanczos_fg | 2.20  | https://github.com/commaai/comma_video_compression_challenge/pull/18 |
+| h265_g16_512x384_veryslow | 2.55  | https://github.com/commaai/comma_video_compression_challenge/pull/21 |
+| h265_tuned | 3.32  | https://github.com/commaai/comma_video_compression_challenge/pull/22 |
+| baseline_fast | 4.39     | |
 | no_compress | 25.0     | |
 
 > mirrored from [comma.ai/leaderboard](https://comma.ai/leaderboard)
