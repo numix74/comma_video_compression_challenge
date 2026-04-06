@@ -3,7 +3,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PD="$(cd "${HERE}/../.." && pwd)"
-TMP_DIR="${PD}/tmp/my_submission"
+TMP_DIR="${PD}/tmp/av1_roi_lanczos_unsharp"
 
 IN_DIR="${PD}/videos"
 VIDEO_NAMES_FILE="${PD}/public_test_video_names.txt"
