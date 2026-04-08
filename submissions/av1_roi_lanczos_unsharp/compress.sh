@@ -53,9 +53,9 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
     --outside-blend 0.50
 
   # Step 2: Downscale + AV1 encode
-  FFMPEG="${PD}/ffmpeg-new"
+  FFMPEG="'"${HERE}"'/ffmpeg-new"
   [ ! -x "$FFMPEG" ] && FFMPEG="ffmpeg"
-  export LD_LIBRARY_PATH="${PD}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export LD_LIBRARY_PATH="'"${HERE}"'/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   "$FFMPEG" -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$PRE_IN" \
     -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos" \
