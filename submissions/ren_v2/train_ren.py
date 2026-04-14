@@ -35,9 +35,17 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class REN(nn.Module):
+    """
+    Must stay in sync with inflate.py REN class.
+    HaarGain: +12 trainable params before CNN body.
+    After PixelUnshuffle(2), channels = {R,G,B}×{y00,y10,y01,y11}.
+    AV1 attenuates y10/y01/y11 (HF) more than y00 (mean).
+    Learned gain restores the HF channels PoseNet relies on.
+    """
     def __init__(self, features=48):
         super().__init__()
         self.down = nn.PixelUnshuffle(2)
+        self.haar_gain = nn.Parameter(torch.ones(1, 12, 1, 1))
         self.body = nn.Sequential(
             nn.Conv2d(12, features, 3, padding=1), nn.LeakyReLU(0.1, inplace=True),
             nn.Conv2d(features, features, 3, padding=1), nn.LeakyReLU(0.1, inplace=True),
@@ -51,7 +59,9 @@ class REN(nn.Module):
 
     def forward(self, x):
         x_norm = x / 255.0
-        residual = self.up(self.body(self.down(x_norm)))
+        shuffled = self.down(x_norm)
+        scaled   = shuffled * self.haar_gain
+        residual = self.up(self.body(scaled))
         return (x_norm + residual).clamp(0, 1) * 255.0
 
 
@@ -239,19 +249,25 @@ def train(args):
     save_pt_path = os.path.join(HERE, 'ren_model.pt')
     save_int8_path = os.path.join(HERE, 'ren_model.int8.bz2')
 
-    # ---- Loss weight calibration ----
+    # ---- Loss weight calibration (score-sensitivity based) ----
     # Score formula: 100*segnet + sqrt(10*posenet) + 25*rate
-    # Contributions at baseline: segnet≈22%, posenet≈44%, rate≈34%
-    # We weight the loss components to match the score formula sensitivity:
-    #   d(score)/d(posenet_dist) = 10 / (2*sqrt(10*posenet)) ≈ large for small posenet
-    #   d(score)/d(segnet_dist)  = 100
-    # At the neural_inflate operating point (posenet≈0.015, segnet≈0.003):
-    #   posenet gradient: 10 / (2*sqrt(0.15)) ≈ 12.9
-    #   segnet gradient: 100
-    # → segnet is actually MORE score-sensitive per unit distortion!
-    # BUT segnet is already very small (0.003), so further reduction yields less.
-    # Calibrate dynamically from first batch:
-    print("\n  Calibrating loss weights from first batch...")
+    #
+    # The correct calibration uses the SCORE GRADIENT, not loss magnitude equality.
+    # At operating point (D_pose, D_seg):
+    #   ∂score/∂D_seg  = 100                              (constant)
+    #   ∂score/∂D_pose = 10 / (2 * sqrt(10 * D_pose))    (grows as D_pose → 0)
+    #
+    # We want w_seg such that the training signal reflects the relative score impact:
+    #   w_seg = (∂score/∂D_seg) / (∂score/∂D_pose) = 100 / sens_pose
+    #
+    # At ren_v2 operating point (D_pose ≈ 0.012):
+    #   sens_pose = 10 / (2*sqrt(0.12)) ≈ 14.4
+    #   w_seg = 100 / 14.4 ≈ 6.9
+    #
+    # This is ~7×, NOT the magnitude-equalised value from lp0/ls0.
+    # The previous calibration was wrong: it drove training to equalize loss
+    # magnitudes rather than score impact.
+    print("\n  Calibrating loss weights (score-sensitivity method)...")
     model.train()
     ca, cb, ga, gb = train_ds[0]
     ca = ca.unsqueeze(0).to(DEVICE)
@@ -260,18 +276,30 @@ def train(args):
     gb = gb.unsqueeze(0).to(DEVICE)
     with torch.no_grad():
         _, lp0, ls0, lt0, lpx0 = compute_loss(
-            model, posenet, segnet, ca, cb, ga, gb, 0.1, 0.005, 0.0
+            model, posenet, segnet, ca, cb, ga, gb, 1.0, 0.005, 0.0
         )
     print(f"  Identity baseline — pose: {lp0:.6f}, seg: {ls0:.6f}, "
           f"temp: {lt0:.6f}, pixel: {lpx0:.6f}")
 
-    # w_seg: balance seg loss to same magnitude as pose loss
-    w_seg = max(0.01, min(10.0, lp0 / ls0)) if ls0 > 0 else 0.1
-    # w_temp: small to discourage flickering without over-constraining
-    w_temp = 0.005
-    # w_pixel: L1 pixel regulariser at ~10% of the pose loss magnitude
-    w_pixel = max(0.005, min(0.5, lp0 / lpx0 * 0.1)) if lpx0 > 0 else 0.05
+    # Estimate current D_pose from identity loss (proxy for operating point)
+    # lp0 is posenet MSE loss at identity (≈ D_pose of compressed input)
+    d_pose_est = max(lp0, 1e-6)
+    d_seg_est  = max(ls0 * 0.01, 1e-6)  # rough proxy (KL → distortion mapping)
 
+    # Score-sensitivity derivatives at estimated operating point
+    sens_pose = 10.0 / (2.0 * math.sqrt(10.0 * d_pose_est))
+    sens_seg  = 100.0
+
+    # w_seg: ratio of score sensitivities (how much more the score cares about seg vs pose)
+    w_seg = max(1.0, min(20.0, sens_seg / sens_pose))
+
+    # w_temp: small regulariser for temporal consistency (no direct score term)
+    w_temp = 0.005
+
+    # w_pixel: L1 regulariser scaled to ~5% of pose signal to prevent hallucinations
+    w_pixel = max(0.005, min(0.5, lp0 * 0.05 / max(lpx0, 1e-8))) if lpx0 > 0 else 0.05
+
+    print(f"  D_pose_est={d_pose_est:.6f}, sens_pose={sens_pose:.2f}, sens_seg={sens_seg:.2f}")
     print(f"  Calibrated: w_seg={w_seg:.4f}, w_temp={w_temp:.4f}, w_pixel={w_pixel:.4f}")
     del ca, cb, ga, gb
 
@@ -347,9 +375,19 @@ def train(args):
                   f"train={train_loss:.6f} (pose={train_lp:.6f} seg={train_ls:.4f})")
 
     print(f"\n  Best val_loss: {best_val:.6f}")
+
+    # Inspect learned Haar gain — shows which sub-pixel channels were amplified
+    gains = model.haar_gain.detach().cpu().squeeze().tolist()
+    chan_names = ['R_y00','R_y10','R_y01','R_y11','G_y00','G_y10','G_y01','G_y11',
+                  'B_y00','B_y10','B_y01','B_y11']
+    print("  Learned Haar gains (>1 = amplified, expected: HF channels y10/y01/y11):")
+    for name, g in zip(chan_names, gains):
+        bar = '█' * int(abs(g - 1.0) * 20)
+        print(f"    {name:8s}: {g:.4f}  {bar}")
+
     if os.path.exists(save_int8_path):
         size_kb = os.path.getsize(save_int8_path) / 1024
-        print(f"  Model (int8.bz2): {save_int8_path} ({size_kb:.1f} KB)")
+        print(f"\n  Model (int8.bz2): {save_int8_path} ({size_kb:.1f} KB)")
         rate_cost = (size_kb / 1024) / 37.5 * 25
         print(f"  Rate cost of model in archive: +{rate_cost:.4f} pts "
               f"({size_kb/1024:.3f} MB × 0.667 pts/MB)")

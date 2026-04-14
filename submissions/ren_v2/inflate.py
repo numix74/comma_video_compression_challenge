@@ -24,14 +24,23 @@ class REN(nn.Module):
     """
     Residual Enhancement Network v2.
 
-    Architecture: PixelUnshuffle(2) → 4×Conv(features) → PixelShuffle(2)
+    Architecture: PixelUnshuffle(2) → HaarGain → 4×Conv(features) → PixelShuffle(2)
     - Works in pixel-shuffled space (stride-2 subpixels) for efficiency
     - Residual connection: output = input + learned_correction
     - LeakyReLU avoids dead neurons on negative residuals
+    - HaarGain: per-channel trainable gain before the CNN body.
+      AV1 compression attenuates high-frequency Haar channels (y10, y01, y11)
+      more than y00 (mean). After PixelUnshuffle(2), the 12 channels are
+      {R,G,B} × {y00, y10, y01, y11}. A learned gain amplifies the HF channels
+      that PoseNet relies on (especially y10/y01 = horizontal/vertical gradients).
+      Cost: +12 parameters (~48 bytes in int8.bz2 — negligible).
     """
     def __init__(self, features=48):
         super().__init__()
         self.down = nn.PixelUnshuffle(2)
+        # Per-channel gain applied after PixelUnshuffle, before the CNN body.
+        # Initialised to 1.0 (identity). Learns to amplify HF Haar channels.
+        self.haar_gain = nn.Parameter(torch.ones(1, 12, 1, 1))
         self.body = nn.Sequential(
             nn.Conv2d(12, features, 3, padding=1), nn.LeakyReLU(0.1, inplace=True),
             nn.Conv2d(features, features, 3, padding=1), nn.LeakyReLU(0.1, inplace=True),
@@ -46,7 +55,9 @@ class REN(nn.Module):
 
     def forward(self, x):
         x_norm = x / 255.0
-        residual = self.up(self.body(self.down(x_norm)))
+        shuffled = self.down(x_norm)           # (B, 12, H/2, W/2)
+        scaled   = shuffled * self.haar_gain   # per-channel amplification
+        residual = self.up(self.body(scaled))  # (B, 3, H, W)
         return (x_norm + residual).clamp(0, 1) * 255.0
 
 
