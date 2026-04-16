@@ -63,12 +63,12 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
   # Key changes vs neural_inflate:
   #   crf 33 -> 36          (~20-25% smaller file)
   #   keyint 180 -> 240     (~2% smaller file, ~12s GOP at 20fps)
-  #   chroma-qp-offset=6   (~3-5% smaller, minimal metric impact:
-  #                          PoseNet YUV6 already 2x-subsamples chroma;
-  #                          SegNet is luma-dominant)
   #   tune=0 (PSNR mode)   PoseNet measures MSE → PSNR-optimised encode is
   #                          more aligned with the actual metric than default
   #                          perceptual/VQ mode (tune=1). Zero bitrate cost.
+  #   NOTE: chroma-qp-offset was removed — not a valid svtav1-params key in
+  #   this version of SVT-AV1 (causes segfault). The effect is marginal anyway
+  #   since PoseNet already 2x-subsamples chroma via YUV6.
   FFMPEG="${PD}/ffmpeg-new"
   [ ! -x "$FFMPEG" ] && FFMPEG="ffmpeg"
   export LD_LIBRARY_PATH="${PD}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -76,7 +76,7 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
     -r 20 -fflags +genpts -i "$PRE_IN" \
     -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos" \
     -pix_fmt yuv420p -c:v libsvtav1 -preset 0 -crf 36 \
-    -svtav1-params "film-grain=22:keyint=240:scd=0:chroma-qp-offset=6:tune=0" \
+    -svtav1-params "film-grain=22:keyint=240:scd=0:tune=0" \
     -r 20 "$OUT"
 
   rm -f "$PRE_IN"
