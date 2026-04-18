@@ -230,3 +230,9 @@ archive/
 inflated/
 report.txt
 
+
+# Fichiers stratégiques — locaux uniquement
+STRATEGY.md
+**/CLAUDE.md
+output/
+2026-*.txt
