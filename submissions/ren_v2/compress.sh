@@ -51,7 +51,7 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
 
   # Step 1: ROI preprocess — denoise outside driving corridor
   rm -f "$PRE_IN"
-  python "'"${HERE}"'/../neural_inflate/preprocess.py" \
+  python3 "'"${HERE}"'/../neural_inflate/preprocess.py" \
     --input "$IN" \
     --output "$PRE_IN" \
     --outside-luma-denoise 2.5 \
@@ -63,20 +63,26 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
   # Key changes vs neural_inflate:
   #   crf 33 -> 36          (~20-25% smaller file)
   #   keyint 180 -> 240     (~2% smaller file, ~12s GOP at 20fps)
-  #   tune=0 (PSNR mode)   PoseNet measures MSE → PSNR-optimised encode is
-  #                          more aligned with the actual metric than default
-  #                          perceptual/VQ mode (tune=1). Zero bitrate cost.
-  #   NOTE: chroma-qp-offset was removed — not a valid svtav1-params key in
-  #   this version of SVT-AV1 (causes segfault). The effect is marginal anyway
-  #   since PoseNet already 2x-subsamples chroma via YUV6.
+  #   tune=0 (PSNR mode)   PoseNet measures MSE → PSNR-optimised encode
+  #   NOTE: chroma-qp-offset removed from svtav1-params (causes segfault)
+  # Encoder priority: libsvtav1 (fast) → libaom-av1 (toujours disponible)
   FFMPEG="${PD}/ffmpeg-new"
-  [ ! -x "$FFMPEG" ] && FFMPEG="ffmpeg"
   export LD_LIBRARY_PATH="${PD}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  "$FFMPEG" -version &>/dev/null || FFMPEG="ffmpeg"
+
+  # Detect available AV1 encoder
+  if "$FFMPEG" -encoders 2>/dev/null | grep -q libsvtav1; then
+    AV1_ENCODER=libsvtav1
+    AV1_OPTS=(-preset 0 -crf 36 -svtav1-params "film-grain=22:keyint=240:scd=0:tune=0")
+  else
+    AV1_ENCODER=libaom-av1
+    AV1_OPTS=(-cpu-used 4 -crf 36 -b:v 0 -g 240 -tune psnr)
+  fi
+
   "$FFMPEG" -nostdin -y -hide_banner -loglevel warning \
     -r 20 -fflags +genpts -i "$PRE_IN" \
     -vf "scale=trunc(iw*0.45/2)*2:trunc(ih*0.45/2)*2:flags=lanczos" \
-    -pix_fmt yuv420p -c:v libsvtav1 -preset 0 -crf 36 \
-    -svtav1-params "film-grain=22:keyint=240:scd=0:tune=0" \
+    -pix_fmt yuv420p -c:v "$AV1_ENCODER" "${AV1_OPTS[@]}" \
     -r 20 "$OUT"
 
   rm -f "$PRE_IN"

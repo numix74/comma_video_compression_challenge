@@ -1,0 +1,3 @@
+# Ne pas ignorer archive/ dans ren_v2 (vidéo AV1 pour entraînement Kaggle)
+!archive/
+!archive/**
