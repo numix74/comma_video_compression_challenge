@@ -338,15 +338,24 @@ def train(args):
             is_best = val_loss < best_val
             force_save = (args.save_every > 0 and epoch % args.save_every == 0)
 
-            if is_best or force_save:
-                if is_best:
-                    best_val = val_loss
+            if is_best:
+                best_val = val_loss
                 torch.save(model.state_dict(), save_pt_path)
                 save_int8_bz2(model, save_int8_path)
-                marker = '  ← best' if is_best else '  ← checkpoint'
+                marker = '  ← best'
                 if drive_dir:
                     shutil.copy(save_int8_path, os.path.join(drive_dir, 'ren_model.int8.bz2'))
                     shutil.copy(save_pt_path,   os.path.join(drive_dir, 'ren_model.pt'))
+                    marker += ' + drive'
+            elif force_save:
+                # Checkpoint périodique dans un fichier séparé — ne touche pas au best
+                ckpt_pt   = save_pt_path.replace('.pt', f'_ckpt{epoch}.pt')
+                ckpt_int8 = save_int8_path.replace('.int8.bz2', f'_ckpt{epoch}.int8.bz2')
+                torch.save(model.state_dict(), ckpt_pt)
+                save_int8_bz2(model, ckpt_int8)
+                marker = '  ← checkpoint'
+                if drive_dir:
+                    shutil.copy(ckpt_pt,   os.path.join(drive_dir, f'ren_model_ckpt{epoch}.pt'))
                     marker += ' + drive'
 
             print(f"  Epoch {epoch:3d}/{args.epochs}  "
