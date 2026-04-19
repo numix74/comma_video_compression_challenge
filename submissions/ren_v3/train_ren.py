@@ -246,8 +246,9 @@ def train(args):
     print(f"  {pose_targets.shape[0]} pose targets")
 
     split = int(n * 0.80)
-    train_ds = PairDataset(comp_frames[:split], gt_frames[:split], pose_targets)
-    val_ds   = PairDataset(comp_frames[split:], gt_frames[split:], pose_targets)
+    pose_split = split // 2
+    train_ds = PairDataset(comp_frames[:split], gt_frames[:split], pose_targets[:pose_split])
+    val_ds   = PairDataset(comp_frames[split:], gt_frames[split:], pose_targets[pose_split:])
     print(f"  Train: {len(train_ds)} pairs, Val: {len(val_ds)} pairs")
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
