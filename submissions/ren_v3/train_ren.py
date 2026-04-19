@@ -259,6 +259,10 @@ def train(args):
     n_params = sum(p.numel() for p in model.parameters())
     print(f"\n  Model: OC-REN(features={args.features}), {n_params:,} parameters")
 
+    if args.resume and os.path.exists(args.resume):
+        model.load_state_dict(torch.load(args.resume, map_location=DEVICE))
+        print(f"  Resumed from {args.resume}")
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-5)
 
@@ -379,6 +383,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int,   default=1)
     parser.add_argument('--lr',         type=float, default=1e-3)
     parser.add_argument('--features',   type=int,   default=48)
+    parser.add_argument('--resume',     type=str,   default='',
+                        help='Chemin vers ren_model.pt pour reprendre l\'entraînement')
     parser.add_argument('--drive-dir',  type=str,   default='',
                         help='Dossier Google Drive pour backup des checkpoints')
     parser.add_argument('--save-every', type=int,   default=10,
