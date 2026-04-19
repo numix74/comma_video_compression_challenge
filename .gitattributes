@@ -63,3 +63,4 @@ saved_model/**/* filter=lfs diff=lfs merge=lfs -text
 *.avi filter=lfs diff=lfs merge=lfs -text
 *.webm filter=lfs diff=lfs merge=lfs -text
 *.wmv filter=lfs diff=lfs merge=lfs -text
+*.pose filter=lfs diff=lfs merge=lfs -text
