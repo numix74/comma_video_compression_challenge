@@ -283,7 +283,7 @@ def train(args):
         _, lp0, ls0 = compute_loss(model, posenet, segnet, ca, cb, ga, gb, pose_b, 1.0, 0.005, 0.0)
     d_pose_est = max(lp0, 1e-6)
     sens_pose  = 10.0 / (2.0 * math.sqrt(10.0 * d_pose_est))
-    w_seg      = max(1.0, min(20.0, 100.0 / sens_pose))
+    w_seg      = max(1.0, min(50.0, 100.0 / sens_pose))
     w_temp     = 0.005
     w_pixel    = max(0.005, min(0.5, lp0 * 0.05 / max(ls0 * 0.01, 1e-8)))
     print(f"  w_seg={w_seg:.2f}, w_temp={w_temp}, w_pixel={w_pixel:.4f}")
