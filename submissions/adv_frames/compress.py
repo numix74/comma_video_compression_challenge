@@ -141,6 +141,22 @@ def optimize_pair(
     return xt.detach(), xt1.detach()
 
 
+def encode_video_lossless(frames_np: np.ndarray, out_path: Path, fps: int):
+    """Encode en FFV1 lossless pour checkpoint intermédiaire."""
+    ffmpeg = get_ffmpeg()
+    cmd = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "warning",
+        "-f", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{W}x{H}", "-r", str(fps),
+        "-i", "pipe:0",
+        "-c:v", "ffv1", str(out_path)
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    proc.communicate(input=frames_np.tobytes())
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg lossless failed (code {proc.returncode})")
+
+
 def encode_video_av1(frames_np: np.ndarray, out_path: Path, fps: int, crf: int):
     """Encode un array (N, H, W, 3) uint8 en AV1 via ffmpeg."""
     ffmpeg = get_ffmpeg()
@@ -185,6 +201,10 @@ def main():
     parser.add_argument("--fps",        type=int,   default=20)
     parser.add_argument("--max-frames", type=int,   default=0,
                         help="Limiter à N frames pour test (0=toutes)")
+    parser.add_argument("--save-optim", type=Path,  default=None,
+                        help="Sauvegarder les frames optimisées (lossless MKV) avant boucle codec")
+    parser.add_argument("--load-optim", type=Path,  default=None,
+                        help="Charger frames optimisées depuis fichier (skip optimisation GPU)")
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -241,11 +261,18 @@ def main():
         f.write(poses_br)
     print(f"  Poses: {len(poses_br)/1024:.1f} KB")
 
-    # ── Optimisation adversariale ──────────────────────────────────────────
-    print(f"\nOptimisation adversariale ({args.iters} iters/paire, CRF={args.crf})...")
-    opt_frames = orig_frames.clone().float()  # (N, H, W, 3)
+    # ── Optimisation adversariale (skip si --load-optim fourni) ───────────
+    if args.load_optim:
+        print(f"\nChargement frames optimisées depuis {args.load_optim} (skip GPU optim)...")
+        opt_np = decode_video_frames(args.load_optim)  # (N, H, W, 3) uint8
+        N = opt_np.shape[0]
+        print(f"  {N} frames chargées")
+    else:
+        print(f"\nOptimisation adversariale ({args.iters} iters/paire, CRF={args.crf})...")
+        opt_frames = orig_frames.clone().float()  # (N, H, W, 3)
 
-    for i in tqdm(range(0, N-1, 2), desc="Optimisation"):
+    if not args.load_optim:
+        for i in tqdm(range(0, N-1, 2), desc="Optimisation"):
         pose_idx = i // 2
         gt_pose  = gt_poses[pose_idx].to(device)
 
@@ -264,12 +291,20 @@ def main():
         opt_frames[i]   = xt.cpu()
         opt_frames[i+1] = xt1.cpu()
 
-    # Dernière frame si N est impair
-    if N % 2 == 1:
-        opt_frames[N-1] = orig_frames[N-1].float()
+        # Dernière frame si N est impair
+        if N % 2 == 1:
+            opt_frames[N-1] = orig_frames[N-1].float()
+
+    # ── Sauvegarder checkpoint lossless si demandé ────────────────────────
+    if not args.load_optim:
+        opt_np = opt_frames.clamp(0, 255).round().to(torch.uint8).numpy()  # (N,H,W,3)
+    if args.save_optim:
+        print(f"\nSauvegarde checkpoint lossless → {args.save_optim}")
+        encode_video_lossless(opt_np, args.save_optim, args.fps)
+        size_mb = args.save_optim.stat().st_size / 1024 / 1024
+        print(f"  Checkpoint : {size_mb:.0f} MB")
 
     # ── Boucle codec : encode → decode → re-optim si nécessaire ──────────
-    opt_np = opt_frames.clamp(0, 255).round().to(torch.uint8).numpy()  # (N,H,W,3)
 
     for codec_iter in range(args.codec_iters):
         print(f"\nBoucle codec {codec_iter+1}/{args.codec_iters}...")
@@ -278,10 +313,8 @@ def main():
         decoded_np = decode_video_frames(tmp_video)
         tmp_video.unlink()
 
-        # Vérifier la dégradation sur un sous-ensemble
-        decoded_t = torch.from_numpy(decoded_np).float().to(device)
-        orig_t    = torch.from_numpy(opt_np).float().to(device)
-        pixel_diff = (decoded_t - orig_t).abs().mean().item()
+        # Vérifier la dégradation sur CPU (évite OOM sur 1200 frames)
+        pixel_diff = np.abs(decoded_np.astype(np.float32) - opt_np.astype(np.float32)).mean()
         print(f"  Diff pixel moyenne après AV1: {pixel_diff:.2f}")
 
         # Re-optimiser depuis les frames décodées si dégradation > seuil
