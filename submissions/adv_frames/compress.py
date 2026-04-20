@@ -273,23 +273,23 @@ def main():
 
     if not args.load_optim:
         for i in tqdm(range(0, N-1, 2), desc="Optimisation"):
-        pose_idx = i // 2
-        gt_pose  = gt_poses[pose_idx].to(device)
+            pose_idx = i // 2
+            gt_pose  = gt_poses[pose_idx].to(device)
 
-        frame_t  = orig_frames[i]
-        frame_t1 = orig_frames[i+1]
+            frame_t  = orig_frames[i]
+            frame_t1 = orig_frames[i+1]
 
-        xt, xt1 = optimize_pair(
-            frame_t, frame_t1,
-            segnet, posenet,
-            gt_masks[i].to(device),
-            gt_masks[i+1].to(device),
-            gt_pose,
-            args.iters, device,
-        )
+            xt, xt1 = optimize_pair(
+                frame_t, frame_t1,
+                segnet, posenet,
+                gt_masks[i].to(device),
+                gt_masks[i+1].to(device),
+                gt_pose,
+                args.iters, device,
+            )
 
-        opt_frames[i]   = xt.cpu()
-        opt_frames[i+1] = xt1.cpu()
+            opt_frames[i]   = xt.cpu()
+            opt_frames[i+1] = xt1.cpu()
 
         # Dernière frame si N est impair
         if N % 2 == 1:
