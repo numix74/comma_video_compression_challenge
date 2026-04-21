@@ -3,7 +3,7 @@
 ren_v2/train_ren.py — Task-aware training for REN v2
 
 Improvements over neural_inflate/train_ren.py:
-  - Must train on ren_v2/archive/0.mkv (CRF-50 output, film-grain=0)
+  - Must train on ren_v2/archive/0.mkv (CRF-44 output, film-grain=0)
   - AdamW optimizer with weight_decay=1e-4 (better regularisation)
   - L1 pixel regulariser: prevents the REN from introducing hallucinations
   - 150 epochs (vs 100) for finer convergence
@@ -119,20 +119,67 @@ def decode_all_frames(video_path, target_w=None, target_h=None, lanczos=False):
     return frames
 
 
-class ConsecutivePairDataset(Dataset):
-    def __init__(self, comp_frames, gt_frames):
-        assert len(comp_frames) == len(gt_frames)
-        self.comp = comp_frames
-        self.gt = gt_frames
+class MultiVideoPairDataset(Dataset):
+    """
+    Paires consécutives intra-vidéo, indexées globalement sur N vidéos.
+    Cache .npy sur disque (réutilisable entre runs).
+    Memmap : faible RAM même pour 64 vidéos.
+    """
+
+    @staticmethod
+    def build_cache(video_pairs, cache_dir, target_w, target_h):
+        """
+        video_pairs : list of (comp_path, gt_path)
+        Retourne un manifest : list of (comp_npy, gt_npy, n_frames)
+        """
+        os.makedirs(cache_dir, exist_ok=True)
+        manifest = []
+        for comp_path, gt_path in video_pairs:
+            name = os.path.splitext(os.path.basename(comp_path))[0]
+            comp_npy = os.path.join(cache_dir, f'{name}_comp.npy')
+            gt_npy   = os.path.join(cache_dir, f'{name}_gt.npy')
+
+            if not os.path.exists(comp_npy):
+                print(f"    cache comp {name}...")
+                frames = decode_all_frames(comp_path, target_w=target_w,
+                                           target_h=target_h, lanczos=True)
+                np.save(comp_npy, np.stack([f.numpy() for f in frames]).astype(np.uint8))
+
+            if not os.path.exists(gt_npy):
+                print(f"    cache GT   {name}...")
+                frames = decode_all_frames(gt_path)
+                np.save(gt_npy, np.stack([f.numpy() for f in frames]).astype(np.uint8))
+
+            n = int(np.load(comp_npy, mmap_mode='r').shape[0])
+            manifest.append((comp_npy, gt_npy, n))
+        return manifest
+
+    def __init__(self, manifest, split='train', train_ratio=0.80):
+        assert split in ('train', 'val')
+        # items : (comp_npy_path, gt_npy_path, frame_idx)
+        # Paires intra-vidéo uniquement, split 80/20 par vidéo
+        self.items = []
+        for comp_npy, gt_npy, n_frames in manifest:
+            cut = int(n_frames * train_ratio)
+            r = range(0, cut - 1) if split == 'train' else range(cut, n_frames - 1)
+            for i in r:
+                self.items.append((comp_npy, gt_npy, i))
+        self._mm = {}  # cache memmap par chemin (ouvert à la demande dans chaque worker)
 
     def __len__(self):
-        return len(self.comp) - 1
+        return len(self.items)
 
     def __getitem__(self, idx):
-        ca = self.comp[idx].permute(2, 0, 1).float()
-        cb = self.comp[idx + 1].permute(2, 0, 1).float()
-        ga = self.gt[idx].permute(2, 0, 1).float()
-        gb = self.gt[idx + 1].permute(2, 0, 1).float()
+        comp_npy, gt_npy, i = self.items[idx]
+        if comp_npy not in self._mm:
+            self._mm[comp_npy] = np.load(comp_npy, mmap_mode='r')
+            self._mm[gt_npy]   = np.load(gt_npy,   mmap_mode='r')
+        comp, gt = self._mm[comp_npy], self._mm[gt_npy]
+        # .copy() obligatoire : transforme la vue memmap en array indépendant
+        ca = torch.from_numpy(comp[i].copy()).permute(2, 0, 1).float()
+        cb = torch.from_numpy(comp[i + 1].copy()).permute(2, 0, 1).float()
+        ga = torch.from_numpy(gt[i].copy()).permute(2, 0, 1).float()
+        gb = torch.from_numpy(gt[i + 1].copy()).permute(2, 0, 1).float()
         return ca, cb, ga, gb
 
 
@@ -191,37 +238,29 @@ def train(args):
 
     W, H = camera_size
 
-    # Find compressed archive — must be from ren_v2's own compress.sh (CRF 50, film-grain=0)
-    archive_path = os.path.join(HERE, 'archive/0.mkv')
-    if not os.path.exists(archive_path):
-        print(f"ERROR: {archive_path} not found.")
-        print("       Run compress.sh first to generate the CRF-50 archive.")
+    archive_dir = os.path.join(HERE, 'archive')
+    gt_dir      = args.gt_dir
+
+    comp_videos = sorted(f for f in os.listdir(archive_dir) if f.endswith('.mkv'))
+    if not comp_videos:
+        print(f"ERROR: aucune vidéo .mkv dans {archive_dir}. Run compress.sh first.")
         sys.exit(1)
 
-    print(f"Loading compressed frames (CRF-50) from {archive_path}...")
-    comp_frames = decode_all_frames(archive_path, target_w=W, target_h=H, lanczos=True)
-    print(f"  {len(comp_frames)} frames at {W}x{H}")
+    video_pairs = []
+    for vname in comp_videos:
+        gt_path = os.path.join(gt_dir, vname)
+        if not os.path.exists(gt_path):
+            print(f"  WARNING: GT manquant pour {vname}, ignoré.")
+            continue
+        video_pairs.append((os.path.join(archive_dir, vname), gt_path))
 
-    gt_path = os.path.join(ROOT, 'videos/0.mkv')
-    if not os.path.exists(gt_path):
-        print(f"ERROR: {gt_path} not found.")
-        sys.exit(1)
+    print(f"\n  {len(video_pairs)} vidéo(s) trouvée(s). Construction du cache...")
+    manifest = MultiVideoPairDataset.build_cache(video_pairs, args.cache_dir, W, H)
 
-    print(f"Loading ground-truth frames from {gt_path}...")
-    gt_frames = decode_all_frames(gt_path)
-    print(f"  {len(gt_frames)} frames")
-
-    if len(comp_frames) != len(gt_frames):
-        n = min(len(comp_frames), len(gt_frames))
-        print(f"WARNING: frame count mismatch ({len(comp_frames)} vs {len(gt_frames)}), "
-              f"truncating to {n}")
-        comp_frames = comp_frames[:n]
-        gt_frames = gt_frames[:n]
-
-    split = int(len(comp_frames) * 0.80)
-    train_ds = ConsecutivePairDataset(comp_frames[:split], gt_frames[:split])
-    val_ds = ConsecutivePairDataset(comp_frames[split:], gt_frames[split:])
-    print(f"  Train: {len(train_ds)} pairs, Val: {len(val_ds)} pairs")
+    train_ds = MultiVideoPairDataset(manifest, split='train')
+    val_ds   = MultiVideoPairDataset(manifest, split='val')
+    print(f"  Train: {len(train_ds)} pairs, Val: {len(val_ds)} pairs "
+          f"(split 80/20 par vidéo, paires intra-vidéo uniquement)")
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
                               num_workers=2, pin_memory=True, drop_last=True)
@@ -301,8 +340,9 @@ def train(args):
     # w_temp: small regulariser for temporal consistency (no direct score term)
     w_temp = 0.005
 
-    # w_pixel: L1 regulariser scaled to ~5% of pose signal to prevent hallucinations
-    w_pixel = max(0.005, min(0.5, lp0 * 0.05 / max(lpx0, 1e-8))) if lpx0 > 0 else 0.05
+    # w_pixel: L1 regulariser fort (~50% du signal pose) pour forcer des corrections
+    # généralisables plutôt que content-specific. Clé pour la généralisation à CRF élevé.
+    w_pixel = max(0.5, min(3.0, lp0 * 0.5 / max(lpx0, 1e-8))) if lpx0 > 0 else 0.5
 
     print(f"  D_pose_est={d_pose_est:.6f}, sens_pose={sens_pose:.2f}, sens_seg={sens_seg:.2f}")
     print(f"  Calibrated: w_seg={w_seg:.4f}, w_temp={w_temp:.4f}, w_pixel={w_pixel:.4f}")
@@ -413,5 +453,13 @@ if __name__ == '__main__':
     parser.add_argument('--features',   type=int,   default=64)
     parser.add_argument('--amp',        action='store_true',
                         help='AMP fp16 (recommandé sur 5090/A100, ~1.5-2× plus rapide)')
+    parser.add_argument('--gt-dir',     type=str,
+                        default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                            os.path.abspath(__file__)))), 'videos'),
+                        help='Dossier GT (défaut: videos/). Avec 64 vidéos: videos_all/')
+    parser.add_argument('--cache-dir',  type=str,
+                        default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                            os.path.abspath(__file__)))), 'tmp', 'train_cache'),
+                        help='Cache .npy pré-décodé (réutilisable entre runs)')
     args = parser.parse_args()
     train(args)
