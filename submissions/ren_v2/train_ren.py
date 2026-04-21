@@ -296,7 +296,7 @@ def train(args):
     sens_seg  = 100.0
 
     # w_seg: ratio of score sensitivities (how much more the score cares about seg vs pose)
-    w_seg = max(1.0, min(20.0, sens_seg / sens_pose))
+    w_seg = max(1.0, min(8.0, sens_seg / sens_pose))
 
     # w_temp: small regulariser for temporal consistency (no direct score term)
     w_temp = 0.005
@@ -308,7 +308,7 @@ def train(args):
     print(f"  Calibrated: w_seg={w_seg:.4f}, w_temp={w_temp:.4f}, w_pixel={w_pixel:.4f}")
     del ca, cb, ga, gb
 
-    best_val = float('inf')
+    best_val_pose = float('inf')
     print(f"\n  Training {args.epochs} epochs "
           f"(batch={args.batch_size}, lr={args.lr}, features={args.features})\n")
 
@@ -368,11 +368,11 @@ def train(args):
             val_ls   /= max(n_val, 1)
 
             marker = ''
-            if val_loss < best_val:
-                best_val = val_loss
+            if val_lp < best_val_pose:
+                best_val_pose = val_lp
                 torch.save(model.state_dict(), save_pt_path)
                 save_int8_bz2(model, save_int8_path)
-                marker = '  ← saved'
+                marker = '  ← saved (best val_pose)'
 
             print(f"  Epoch {epoch:3d}/{args.epochs}  "
                   f"train={train_loss:.6f} (pose={train_lp:.6f} seg={train_ls:.4f})  "
@@ -382,7 +382,7 @@ def train(args):
             print(f"  Epoch {epoch:3d}/{args.epochs}  "
                   f"train={train_loss:.6f} (pose={train_lp:.6f} seg={train_ls:.4f})")
 
-    print(f"\n  Best val_loss: {best_val:.6f}")
+    print(f"\n  Best val_pose: {best_val_pose:.6f}")
 
     # Inspect learned Haar gain — shows which sub-pixel channels were amplified
     gains = model.haar_gain.detach().cpu().squeeze().tolist()
