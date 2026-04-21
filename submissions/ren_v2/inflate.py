@@ -100,15 +100,18 @@ def get_model(archive_dir=None):
         candidates.append((os.path.join(d, 'ren_model.pt'), 'raw'))
     for path, fmt in candidates:
         if os.path.exists(path):
-            MODEL = REN(features=64).to(DEVICE).eval()
             if fmt == 'int8':
-                MODEL.load_state_dict(_load_int8_bz2(path))
+                sd = _load_int8_bz2(path)
             elif fmt == 'f16':
-                MODEL.load_state_dict(_load_f16_bz2(path))
+                sd = _load_f16_bz2(path)
             else:
-                MODEL.load_state_dict(torch.load(path, map_location=DEVICE, weights_only=True))
+                sd = torch.load(path, map_location=DEVICE, weights_only=True)
+            # Détecte features depuis le state_dict (body.0.bias)
+            features = sd['body.0.bias'].shape[0]
+            MODEL = REN(features=features).to(DEVICE).eval()
+            MODEL.load_state_dict(sd)
             n_params = sum(p.numel() for p in MODEL.parameters())
-            print(f"[ren_v2] Loaded REN ({n_params:,} params) from {path}")
+            print(f"[ren_v2] Loaded REN features={features} ({n_params:,} params) from {path}")
             return MODEL
     raise FileNotFoundError(
         "ren_model not found. Searched: " + ", ".join(p for p, _ in candidates)
