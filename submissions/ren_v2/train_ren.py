@@ -248,8 +248,14 @@ def train(args):
 
     video_pairs = []
     for vname in comp_videos:
-        gt_path = os.path.join(gt_dir, vname)
-        if not os.path.exists(gt_path):
+        base = os.path.splitext(vname)[0]
+        gt_path = next(
+            (os.path.join(gt_dir, base + ext)
+             for ext in ('.mkv', '.hevc', '.mp4')
+             if os.path.exists(os.path.join(gt_dir, base + ext))),
+            None
+        )
+        if gt_path is None:
             print(f"  WARNING: GT manquant pour {vname}, ignoré.")
             continue
         video_pairs.append((os.path.join(archive_dir, vname), gt_path))
