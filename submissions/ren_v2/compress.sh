@@ -49,15 +49,8 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
 
   echo "→ ${IN}  →  ${OUT}"
 
-  # Step 1: ROI preprocess — denoise outside driving corridor
-  rm -f "$PRE_IN"
-  python3 "'"${HERE}"'/../neural_inflate/preprocess.py" \
-    --input "$IN" \
-    --output "$PRE_IN" \
-    --outside-luma-denoise 2.5 \
-    --outside-chroma-mode medium \
-    --feather-radius 24 \
-    --outside-blend 0.50
+  # Preprocess ROI désactivé (trop lent pour 64 vidéos d'entraînement)
+  PRE_IN="$IN"
 
   # Step 2: Downscale + AV1 encode
   # Key changes vs neural_inflate:
@@ -85,7 +78,6 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
     -pix_fmt yuv420p -c:v "$AV1_ENCODER" "${AV1_OPTS[@]}" \
     -r 20 "$OUT"
 
-  rm -f "$PRE_IN"
 ' _ {}
 
 # Copy the trained REN model into the archive (it will be found by inflate.py)
