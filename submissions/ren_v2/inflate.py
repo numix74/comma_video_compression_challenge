@@ -100,7 +100,7 @@ def get_model(archive_dir=None):
         candidates.append((os.path.join(d, 'ren_model.pt'), 'raw'))
     for path, fmt in candidates:
         if os.path.exists(path):
-            MODEL = REN(features=48).to(DEVICE).eval()
+            MODEL = REN(features=64).to(DEVICE).eval()
             if fmt == 'int8':
                 MODEL.load_state_dict(_load_int8_bz2(path))
             elif fmt == 'f16':

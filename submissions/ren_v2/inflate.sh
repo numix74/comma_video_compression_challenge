@@ -24,6 +24,6 @@ while IFS= read -r line; do
 
   printf "Decoding + resizing + REN %s ... " "$line"
   cd "$ROOT"
-  python -m "submissions.${SUB_NAME}.inflate" "$SRC" "$DST"
+  python3 -m "submissions.${SUB_NAME}.inflate" "$SRC" "$DST"
   echo "done"
 done < "$FILE_LIST"

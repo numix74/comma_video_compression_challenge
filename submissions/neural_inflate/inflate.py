@@ -63,15 +63,19 @@ def get_model(archive_dir=None):
         candidates.append((os.path.join(d, 'ren_model.pt'), 'raw'))
     for path, fmt in candidates:
         if os.path.exists(path):
-            MODEL = REN(features=32).to(DEVICE).eval()
-            if fmt == 'int8':
-                MODEL.load_state_dict(_load_int8_bz2(path))
-            elif fmt == 'f16':
-                MODEL.load_state_dict(_load_f16_bz2(path))
-            else:
-                MODEL.load_state_dict(torch.load(path, map_location=DEVICE, weights_only=True))
-            return MODEL
-    raise FileNotFoundError("ren_model not found")
+            try:
+                m = REN(features=32).to(DEVICE).eval()
+                if fmt == 'int8':
+                    m.load_state_dict(_load_int8_bz2(path))
+                elif fmt == 'f16':
+                    m.load_state_dict(_load_f16_bz2(path))
+                else:
+                    m.load_state_dict(torch.load(path, map_location=DEVICE, weights_only=True))
+                MODEL = m
+                return MODEL
+            except (RuntimeError, Exception):
+                continue  # mauvaise architecture, ignorer
+    return None  # pas de modèle compatible → Lanczos seul
 
 
 def decode_and_resize_to_file(video_path: str, dst: str):
@@ -87,10 +91,14 @@ def decode_and_resize_to_file(video_path: str, dst: str):
             if H != target_h or W != target_w:
                 pil = Image.fromarray(t.numpy())
                 pil = pil.resize((target_w, target_h), Image.LANCZOS)
-                x = torch.from_numpy(np.array(pil)).permute(2, 0, 1).unsqueeze(0).float().to(DEVICE)
-                with torch.no_grad():
-                    x = get_model(os.path.dirname(video_path))(x)
-                t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().cpu().to(torch.uint8)
+                model = get_model(os.path.dirname(video_path))
+                if model is not None:
+                    x = torch.from_numpy(np.array(pil)).permute(2, 0, 1).unsqueeze(0).float().to(DEVICE)
+                    with torch.no_grad():
+                        x = model(x)
+                    t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().cpu().to(torch.uint8)
+                else:
+                    t = torch.from_numpy(np.array(pil)).to(torch.uint8)
             f.write(t.contiguous().numpy().tobytes())
             n += 1
     container.close()

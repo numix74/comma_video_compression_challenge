@@ -73,10 +73,10 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
   # Detect available AV1 encoder
   if "$FFMPEG" -encoders 2>/dev/null | grep -q libsvtav1; then
     AV1_ENCODER=libsvtav1
-    AV1_OPTS=(-preset 0 -crf 38 -svtav1-params "film-grain=22:keyint=240:scd=0:tune=0")
+    AV1_OPTS=(-preset 0 -crf 50 -svtav1-params "film-grain=0:keyint=240:scd=0:tune=0")
   else
     AV1_ENCODER=libaom-av1
-    AV1_OPTS=(-cpu-used 4 -crf 38 -b:v 0 -g 240 -tune psnr)
+    AV1_OPTS=(-cpu-used 4 -crf 50 -b:v 0 -g 240 -tune psnr)
   fi
 
   "$FFMPEG" -nostdin -y -hide_banner -loglevel warning \

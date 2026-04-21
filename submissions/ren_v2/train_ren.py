@@ -3,7 +3,7 @@
 ren_v2/train_ren.py — Task-aware training for REN v2
 
 Improvements over neural_inflate/train_ren.py:
-  - Must train on ren_v2/archive/0.mkv (CRF-36 output, NOT CRF-33)
+  - Must train on ren_v2/archive/0.mkv (CRF-50 output, film-grain=0)
   - AdamW optimizer with weight_decay=1e-4 (better regularisation)
   - L1 pixel regulariser: prevents the REN from introducing hallucinations
   - 150 epochs (vs 100) for finer convergence
@@ -13,7 +13,7 @@ Improvements over neural_inflate/train_ren.py:
 Usage:
   # 1. Run compress.sh first to produce ren_v2/archive/0.mkv
   # 2. Run this script:
-  python train_ren.py [--epochs 150] [--batch-size 1] [--lr 1e-3] [--features 48]
+  python train_ren.py [--epochs 150] [--batch-size 1] [--lr 1e-3] [--features 64]
   # 3. The script saves ren_v2/ren_model.int8.bz2 (included by compress.sh)
 """
 import os, sys, argparse, math, io, bz2, struct
@@ -191,14 +191,14 @@ def train(args):
 
     W, H = camera_size
 
-    # Find compressed archive — must be from ren_v2's own compress.sh (CRF 36)
+    # Find compressed archive — must be from ren_v2's own compress.sh (CRF 50, film-grain=0)
     archive_path = os.path.join(HERE, 'archive/0.mkv')
     if not os.path.exists(archive_path):
         print(f"ERROR: {archive_path} not found.")
-        print("       Run compress.sh first to generate the CRF-36 archive.")
+        print("       Run compress.sh first to generate the CRF-50 archive.")
         sys.exit(1)
 
-    print(f"Loading compressed frames (CRF-36) from {archive_path}...")
+    print(f"Loading compressed frames (CRF-50) from {archive_path}...")
     comp_frames = decode_all_frames(archive_path, target_w=W, target_h=H, lanczos=True)
     print(f"  {len(comp_frames)} frames at {W}x{H}")
 
@@ -224,9 +224,9 @@ def train(args):
     print(f"  Train: {len(train_ds)} pairs, Val: {len(val_ds)} pairs")
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                              num_workers=0, pin_memory=True, drop_last=True)
+                              num_workers=2, pin_memory=True, drop_last=True)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
-                            num_workers=0, pin_memory=True)
+                            num_workers=2, pin_memory=True)
 
     model = REN(features=args.features).to(DEVICE)
     n_params = sum(p.numel() for p in model.parameters())
@@ -245,6 +245,11 @@ def train(args):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=args.epochs, eta_min=1e-5
     )
+
+    use_amp = args.amp and DEVICE.type == 'cuda'
+    scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
+    if use_amp:
+        print("  AMP fp16 activé")
 
     save_pt_path = os.path.join(HERE, 'ren_model.pt')
     save_int8_path = os.path.join(HERE, 'ren_model.int8.bz2')
@@ -319,13 +324,16 @@ def train(args):
             gt_b   = gt_b.to(DEVICE)
 
             optimizer.zero_grad()
-            loss, lp, ls, lt, lpx = compute_loss(
-                model, posenet, segnet, comp_a, comp_b, gt_a, gt_b,
-                w_seg, w_temp, w_pixel
-            )
-            loss.backward()
+            with torch.autocast(device_type=DEVICE.type, dtype=torch.float16, enabled=use_amp):
+                loss, lp, ls, lt, lpx = compute_loss(
+                    model, posenet, segnet, comp_a, comp_b, gt_a, gt_b,
+                    w_seg, w_temp, w_pixel
+                )
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
 
             train_loss += loss.item()
             train_lp   += lp
@@ -397,11 +405,13 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Train REN v2 (task-aware, CRF-36 targeted)'
+        description='Train REN v2 (task-aware, CRF-50 targeted)'
     )
     parser.add_argument('--epochs',     type=int,   default=150)
     parser.add_argument('--batch-size', type=int,   default=1)
     parser.add_argument('--lr',         type=float, default=1e-3)
-    parser.add_argument('--features',   type=int,   default=48)
+    parser.add_argument('--features',   type=int,   default=64)
+    parser.add_argument('--amp',        action='store_true',
+                        help='AMP fp16 (recommandé sur 5090/A100, ~1.5-2× plus rapide)')
     args = parser.parse_args()
     train(args)

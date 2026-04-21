@@ -66,7 +66,7 @@ fi
 echo "All videos inflated to ${INFLATED_DIR}"
 
 # evaluate
-python "$HERE/evaluate.py" \
+python3 "$HERE/evaluate.py" \
   --submission-dir "$SUBMISSION_DIR" \
   --uncompressed-dir "$HERE/videos" \
   --report "$SUBMISSION_DIR/report.txt" \
