@@ -34,8 +34,6 @@ done
 
 rm -rf "$ARCHIVE_DIR"
 mkdir -p "$ARCHIVE_DIR"
-mkdir -p "$TMP_DIR"
-
 export IN_DIR ARCHIVE_DIR PD
 
 head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -I{} bash -lc '
@@ -45,12 +43,9 @@ head -n "$(wc -l < "$VIDEO_NAMES_FILE")" "$VIDEO_NAMES_FILE" | xargs -P"$JOBS" -
   IN="${IN_DIR}/${rel}"
   BASE="${rel%.*}"
   OUT="${ARCHIVE_DIR}/${BASE}.mkv"
-  PRE_IN="'"${TMP_DIR}"'/${BASE}.pre.mkv"
+  PRE_IN="$IN"
 
   echo "→ ${IN}  →  ${OUT}"
-
-  # Preprocess ROI désactivé (trop lent pour 64 vidéos d'entraînement)
-  PRE_IN="$IN"
 
   # Step 2: Downscale + AV1 encode
   # Key changes vs neural_inflate:
